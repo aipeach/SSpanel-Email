@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -199,7 +198,6 @@ function parseStoredFilters(filterJson: string) {
 }
 
 export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
-  const router = useRouter();
   const isEditMode = useMemo(
     () => Number.isInteger(editCampaignId) && Number(editCampaignId) > 0,
     [editCampaignId],
@@ -431,8 +429,8 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
         return;
       }
 
-      router.push(`/campaigns/${campaignId}`);
-      router.refresh();
+      // 生产环境若反向代理对 RSC 导航支持不完整，整页跳转更稳妥。
+      window.location.href = `/campaigns/${campaignId}`;
     } catch {
       setError(isEditMode ? "更新任务失败，请稍后重试" : "创建任务失败，请稍后重试");
     } finally {
