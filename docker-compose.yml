@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: sspanel-Email-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sspanel-Email
+      MYSQL_USER: sspanel-Email
+      MYSQL_PASSWORD: Abc123
+      TZ: Asia/Shanghai
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./data/mariadb:/var/lib/mysql
+    command:
+      [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+        "--default-time-zone=+08:00"
+      ]
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: sspanel-Email-phpmyadmin
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: sspanel-Email
+      PMA_PASSWORD: Abc123
+      PMA_ARBITRARY: "1"
+      UPLOAD_LIMIT: 512M
+      TZ: Asia/Shanghai
+    ports:
+      - "8081:80"
+    depends_on:
+      - mariadb
