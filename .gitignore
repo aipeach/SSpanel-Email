@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+.npm-cache/
+
+# next
+.next/
+out/
+
+# typescript
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# misc
+.DS_Store
+*.pem
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+data/
