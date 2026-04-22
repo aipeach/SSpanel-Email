@@ -9,11 +9,13 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type ContentFormat = "html" | "markdown";
+type MailProvider = "sendgrid" | "resend";
 
 export function DirectSendForm() {
   const [toEmail, setToEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [subject, setSubject] = useState("");
+  const [mailProvider, setMailProvider] = useState<MailProvider>("sendgrid");
   const [contentFormat, setContentFormat] = useState<ContentFormat>("html");
   const [htmlContent, setHtmlContent] = useState("");
   const [markdownContent, setMarkdownContent] = useState("");
@@ -39,6 +41,7 @@ export function DirectSendForm() {
           toEmail,
           userName,
           subject,
+          mailProvider,
           contentFormat,
           htmlContent: contentFormat === "html" ? htmlContent : undefined,
           markdownContent: contentFormat === "markdown" ? markdownContent : undefined,
@@ -57,9 +60,9 @@ export function DirectSendForm() {
       }
 
       if (payload.messageId) {
-        setNotice(`发送成功，Message ID: ${payload.messageId}`);
+        setNotice(`发送成功（渠道 ${mailProvider}），Message ID: ${payload.messageId}`);
       } else {
-        setNotice("发送成功");
+        setNotice(`发送成功（渠道 ${mailProvider}）`);
       }
     } catch {
       setError("发送失败，请稍后重试");
@@ -102,6 +105,18 @@ export function DirectSendForm() {
           <div className="grid gap-2">
             <Label htmlFor="subject">邮件主题</Label>
             <Input id="subject" value={subject} onChange={(event) => setSubject(event.target.value)} required />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="mailProvider">发件渠道</Label>
+            <Select
+              id="mailProvider"
+              value={mailProvider}
+              onChange={(event) => setMailProvider(event.target.value as MailProvider)}
+            >
+              <option value="sendgrid">SendGrid</option>
+              <option value="resend">Resend</option>
+            </Select>
           </div>
 
           <div className="grid gap-2">

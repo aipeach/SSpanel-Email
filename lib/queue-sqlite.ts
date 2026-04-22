@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import type { MailProvider } from "@/lib/mail-provider";
 
 export type QueueJobStatus = "queued" | "running" | "done" | "failed" | "partial";
 export type QueueItemStatus = "pending" | "success" | "failed";
@@ -9,6 +10,7 @@ export type QueueJobRow = {
   id: number;
   campaign_id: number;
   status: QueueJobStatus;
+  mail_provider: MailProvider;
   stop_requested: number;
   rate_per_minute: number;
   total_count: number;
@@ -66,6 +68,7 @@ function ensureQueueSchema(db: DatabaseSync) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       campaign_id INTEGER NOT NULL,
       status TEXT NOT NULL CHECK(status IN ('queued','running','done','failed','partial')),
+      mail_provider TEXT NOT NULL DEFAULT 'sendgrid',
       stop_requested INTEGER NOT NULL DEFAULT 0,
       rate_per_minute INTEGER NOT NULL,
       total_count INTEGER NOT NULL DEFAULT 0,
@@ -116,6 +119,13 @@ function ensureQueueSchema(db: DatabaseSync) {
     "stop_requested",
     "ALTER TABLE email_queue_job ADD COLUMN stop_requested INTEGER NOT NULL DEFAULT 0",
   );
+
+  ensureColumnExists(
+    db,
+    "email_queue_job",
+    "mail_provider",
+    "ALTER TABLE email_queue_job ADD COLUMN mail_provider TEXT NOT NULL DEFAULT 'sendgrid'",
+  );
 }
 
 export function getQueueDb() {
@@ -145,6 +155,7 @@ export function findActiveQueueJobByCampaign(campaignId: number) {
           id,
           campaign_id,
           status,
+          mail_provider,
           stop_requested,
           rate_per_minute,
           total_count,
@@ -167,6 +178,7 @@ export function findActiveQueueJobByCampaign(campaignId: number) {
 
 export function createQueueJob(input: {
   campaignId: number;
+  mailProvider: MailProvider;
   ratePerMinute: number;
   recipients: Array<{
     campaignRecipientId: number;
@@ -182,11 +194,11 @@ export function createQueueJob(input: {
     const insertJobResult = db
       .prepare(
         `
-          INSERT INTO email_queue_job (campaign_id, status, rate_per_minute, total_count)
-          VALUES (?, 'queued', ?, ?)
+          INSERT INTO email_queue_job (campaign_id, status, mail_provider, rate_per_minute, total_count)
+          VALUES (?, 'queued', ?, ?, ?)
         `,
       )
-      .run(input.campaignId, input.ratePerMinute, input.recipients.length);
+      .run(input.campaignId, input.mailProvider, input.ratePerMinute, input.recipients.length);
 
     const jobId = Number(insertJobResult.lastInsertRowid);
     const insertItem = db.prepare(
@@ -222,6 +234,7 @@ export function claimNextQueueJob() {
           id,
           campaign_id,
           status,
+          mail_provider,
           stop_requested,
           rate_per_minute,
           total_count,
@@ -250,6 +263,7 @@ export function claimNextQueueJob() {
           id,
           campaign_id,
           status,
+          mail_provider,
           stop_requested,
           rate_per_minute,
           total_count,
@@ -361,6 +375,7 @@ export function requestStopQueueJobByCampaign(campaignId: number) {
           id,
           campaign_id,
           status,
+          mail_provider,
           stop_requested,
           rate_per_minute,
           total_count,

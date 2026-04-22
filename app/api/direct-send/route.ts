@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { buildEmailContent } from "@/lib/email-content";
+import { normalizeMailProvider, sendOneEmail } from "@/lib/mail-provider";
 import { recordDirectSendLog } from "@/lib/log-repo";
-import { sendOneEmail } from "@/lib/sendgrid";
 
 const payloadSchema = z.object({
   toEmail: z.string().trim().email("收件邮箱格式不正确").max(255, "收件邮箱过长"),
   userName: z.string().trim().max(128, "用户名过长").optional(),
   subject: z.string().trim().min(1, "主题不能为空").max(255, "主题过长"),
+  mailProvider: z.enum(["sendgrid", "resend"]).optional(),
   contentFormat: z.enum(["html", "markdown"]).default("html"),
   htmlContent: z.string().optional(),
   markdownContent: z.string().optional(),
@@ -43,8 +44,10 @@ export async function POST(request: NextRequest) {
       textContent: payload.textContent,
     });
     const userName = deriveUserName(payload.toEmail, payload.userName);
+    const mailProvider = normalizeMailProvider(payload.mailProvider);
 
     const messageId = await sendOneEmail({
+      mailProvider,
       toEmail: payload.toEmail,
       userName,
       subject: payload.subject,
@@ -56,6 +59,7 @@ export async function POST(request: NextRequest) {
       toEmail: payload.toEmail,
       userName,
       subject: payload.subject,
+      mailProvider,
       contentFormat: payload.contentFormat,
       status: "success",
       providerMessageId: messageId,
@@ -72,6 +76,7 @@ export async function POST(request: NextRequest) {
           toEmail: parsedPayload.toEmail,
           userName: deriveUserName(parsedPayload.toEmail, parsedPayload.userName),
           subject: parsedPayload.subject,
+          mailProvider: normalizeMailProvider(parsedPayload.mailProvider),
           contentFormat: parsedPayload.contentFormat,
           status: "failed",
           errorMessage: error instanceof Error ? error.message : "发送失败",

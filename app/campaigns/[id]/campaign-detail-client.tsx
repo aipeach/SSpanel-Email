@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type CampaignDetail = {
@@ -18,6 +19,7 @@ type CampaignDetail = {
   filter_json: string;
   recipient_count: number;
   status: "draft" | "sending" | "done" | "failed" | "partial" | "stopped";
+  send_provider: "sendgrid" | "resend";
   error_message: string | null;
   created_at: string;
   started_at: string | null;
@@ -49,7 +51,9 @@ type SendSummary = {
   alreadyQueued: boolean;
   queuedCount: number;
   ratePerMinute: number;
+  mailProvider: "sendgrid" | "resend";
   usedDefaultRate: boolean;
+  usedDefaultProvider: boolean;
 };
 
 function statusVariant(status: CampaignDetail["status"]) {
@@ -77,6 +81,7 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [ratePerMinuteInput, setRatePerMinuteInput] = useState("");
+  const [mailProvider, setMailProvider] = useState<"sendgrid" | "resend">("sendgrid");
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
 
   const loadCampaign = useCallback(async (silent = false) => {
@@ -129,6 +134,12 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
     };
   }, [campaign, loadCampaign]);
 
+  useEffect(() => {
+    if (campaign) {
+      setMailProvider(campaign.send_provider);
+    }
+  }, [campaign]);
+
   async function onSendNow() {
     setSending(true);
     setError("");
@@ -157,6 +168,7 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
         },
         body: JSON.stringify({
           ratePerMinute,
+          mailProvider,
         }),
       });
 
@@ -175,7 +187,10 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
       if (summary) {
         const queueAction = summary.alreadyQueued ? "已有任务在队列中，已触发继续处理" : "已加入异步队列";
         const rateLabel = summary.usedDefaultRate ? `默认速率 ${summary.ratePerMinute}` : `本次速率 ${summary.ratePerMinute}`;
-        setNotice(`${queueAction}（Job #${summary.jobId}，待处理 ${summary.queuedCount}，${rateLabel} 封/分钟）`);
+        const providerLabel = summary.usedDefaultProvider
+          ? `默认渠道 ${summary.mailProvider}`
+          : `本次渠道 ${summary.mailProvider}`;
+        setNotice(`${queueAction}（Job #${summary.jobId}，待处理 ${summary.queuedCount}，${rateLabel} 封/分钟，${providerLabel}）`);
       }
 
       await loadCampaign(true);
@@ -294,6 +309,7 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
           <p className="text-sm text-slate-700">完成时间：{campaign.finished_at ? new Date(campaign.finished_at).toLocaleString() : "-"}</p>
           <p className="text-sm text-slate-700">失败信息：{campaign.error_message || "-"}</p>
           <p className="text-sm text-slate-700">发送模式：异步队列（SQLite）</p>
+          <p className="text-sm text-slate-700">当前发件渠道：{campaign.send_provider}</p>
 
           {canSendNow ? (
             <>
@@ -307,6 +323,18 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
                   onChange={(event) => setRatePerMinuteInput(event.target.value)}
                   placeholder="留空使用默认速率"
                 />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="mailProvider">发件渠道</Label>
+                <Select
+                  id="mailProvider"
+                  value={mailProvider}
+                  onChange={(event) => setMailProvider(event.target.value as "sendgrid" | "resend")}
+                >
+                  <option value="sendgrid">SendGrid</option>
+                  <option value="resend">Resend</option>
+                </Select>
               </div>
 
               <Button

@@ -11,6 +11,7 @@ type CampaignItem = {
   subject: string;
   recipient_count: number;
   status: "draft" | "sending" | "done" | "failed" | "partial" | "stopped";
+  send_provider: "sendgrid" | "resend";
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -30,6 +31,10 @@ function statusText(status: CampaignItem["status"]) {
   if (status === "failed") return "失败";
   if (status === "partial") return "部分成功";
   return "已停止";
+}
+
+function providerLabel(provider: CampaignItem["send_provider"]) {
+  return provider === "resend" ? "Resend" : "SendGrid";
 }
 
 export function CampaignListClient() {
@@ -95,6 +100,7 @@ export function CampaignListClient() {
           <TableHead>主题</TableHead>
           <TableHead>人数</TableHead>
           <TableHead>状态</TableHead>
+          <TableHead>渠道</TableHead>
           <TableHead>创建时间</TableHead>
           <TableHead>详情</TableHead>
         </TableRow>
@@ -108,6 +114,7 @@ export function CampaignListClient() {
             <TableCell>
               <Badge variant={statusBadgeVariant(campaign.status)}>{statusText(campaign.status)}</Badge>
             </TableCell>
+            <TableCell>{providerLabel(campaign.send_provider)}</TableCell>
             <TableCell>{new Date(campaign.created_at).toLocaleString()}</TableCell>
             <TableCell>
               <Button asChild size="sm" variant="secondary">

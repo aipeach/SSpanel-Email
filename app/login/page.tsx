@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-600">SSPanel Mail Console</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">统一管理用户筛选、邮件内容和异步发送队列</h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
-            该系统提供用户高级筛选、Markdown/HTML 邮件编辑、SendGrid 异步队列发送与发送日志回溯。
+            该系统提供用户高级筛选、Markdown/HTML 邮件编辑、SendGrid/Resend 双渠道异步队列发送与发送日志回溯。
           </p>
         </section>
 

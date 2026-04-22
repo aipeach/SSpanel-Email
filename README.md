@@ -1,6 +1,6 @@
 # SSPanel 邮件系统
 
-基于 Next.js + Tailwind CSS + shadcn/ui + MySQL + SendGrid，实现 SSPanel 用户筛选与邮件发送。
+基于 Next.js + Tailwind CSS + shadcn/ui + MySQL + SendGrid/Resend，实现 SSPanel 用户筛选与邮件发送。
 
 ## 功能
 
@@ -14,7 +14,8 @@
 - 读取 SSPanel `user` 表作为收件人来源
 - 高级筛选：`reg_date`、`last_day_t`、`class`、`class_expire`、`node_group`、`is_admin`、`enable`
 - 邮件任务创建、任务列表、任务详情
-- SendGrid 异步队列发送（SQLite 持久化队列）+ 发送状态回写
+- SendGrid / Resend 异步队列发送（SQLite 持久化队列）+ 发送状态回写
+- 直接发送支持在 SendGrid 与 Resend 之间切换
 - 默认发送速率控制，且支持每次发送覆盖速率
 
 ## 1. 安装依赖
@@ -34,8 +35,10 @@ cp .env.example .env
 - `SESSION_SECRET`（至少 32 位）
 - `MYSQL_HOST` `MYSQL_PORT` `MYSQL_USER` `MYSQL_PASSWORD` `MYSQL_DATABASE`
 - `SENDGRID_API_KEY` `SENDGRID_FROM_EMAIL` `SENDGRID_FROM_NAME`
+- `RESEND_API_KEY` `RESEND_FROM_EMAIL` `RESEND_FROM_NAME`
 - `QUEUE_SQLITE_PATH`（默认 `./data/email-queue.sqlite`）
 - `DEFAULT_SEND_RATE_PER_MINUTE`（默认 60）
+- `DEFAULT_MAIL_PROVIDER`（`sendgrid` 或 `resend`，默认 `sendgrid`）
 - 管理员密码二选一：
   - 推荐：`ADMIN_PASSWORD_HASH`
   - 临时：`ADMIN_PASSWORD`

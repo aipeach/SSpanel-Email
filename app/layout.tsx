@@ -11,7 +11,7 @@ const notoSansSC = Noto_Sans_SC({
 
 export const metadata: Metadata = {
   title: "SSPanel 邮件系统",
-  description: "基于 Next.js 与 SendGrid 的 SSPanel 邮件后台",
+  description: "基于 Next.js + SendGrid/Resend 的 SSPanel 邮件后台",
 };
 
 export default function RootLayout({

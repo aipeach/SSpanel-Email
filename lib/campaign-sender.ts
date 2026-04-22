@@ -7,6 +7,7 @@ import {
   resetFailedRecipientsToPending,
   startCampaignSending,
 } from "@/lib/campaign-repo";
+import { normalizeMailProvider, sendOneEmail, type MailProvider } from "@/lib/mail-provider";
 import {
   claimNextQueueJob,
   createQueueJob,
@@ -19,7 +20,6 @@ import {
   requestStopQueueJobByCampaign,
   summarizeQueueJob,
 } from "@/lib/queue-sqlite";
-import { sendOneEmail } from "@/lib/sendgrid";
 
 const MIN_RATE_PER_MINUTE = 1;
 const MAX_RATE_PER_MINUTE = 100_000;
@@ -73,6 +73,24 @@ function resolveRatePerMinute(overrideRatePerMinute?: number) {
   return {
     ratePerMinute: getDefaultRatePerMinute(),
     usedDefaultRate: true,
+  };
+}
+
+export function getDefaultMailProvider() {
+  return normalizeMailProvider(process.env.DEFAULT_MAIL_PROVIDER?.trim() || undefined);
+}
+
+function resolveMailProvider(overrideMailProvider?: MailProvider) {
+  if (overrideMailProvider) {
+    return {
+      mailProvider: normalizeMailProvider(overrideMailProvider),
+      usedDefaultProvider: false,
+    };
+  }
+
+  return {
+    mailProvider: getDefaultMailProvider(),
+    usedDefaultProvider: true,
   };
 }
 
@@ -134,6 +152,7 @@ async function collectPendingRecipients(campaignId: number) {
 async function processQueueJob(job: {
   id: number;
   campaign_id: number;
+  mail_provider: MailProvider;
   rate_per_minute: number;
 }) {
   const campaign = await getCampaignForSending(job.campaign_id);
@@ -176,6 +195,7 @@ async function processQueueJob(job: {
 
     try {
       const providerMessageId = await sendOneEmail({
+        mailProvider: job.mail_provider,
         toEmail: item.email,
         userName: item.user_name,
         subject: campaign.subject,
@@ -285,7 +305,11 @@ async function runQueueWorker() {
   }
 }
 
-export async function sendCampaignById(campaignId: number, overrideRatePerMinute?: number) {
+export async function sendCampaignById(
+  campaignId: number,
+  overrideRatePerMinute?: number,
+  overrideMailProvider?: MailProvider,
+) {
   const campaign = await getCampaignForSending(campaignId);
 
   if (!campaign) {
@@ -297,8 +321,16 @@ export async function sendCampaignById(campaignId: number, overrideRatePerMinute
   }
 
   const activeJob = findActiveQueueJobByCampaign(campaignId);
+  const { mailProvider, usedDefaultProvider } = resolveMailProvider(overrideMailProvider);
 
   if (activeJob) {
+    if (overrideMailProvider && activeJob.mail_provider !== mailProvider) {
+      throw new CampaignSendError(
+        `当前已有 ${activeJob.mail_provider} 发件作业正在队列中，请等待结束后再切换渠道`,
+        409,
+      );
+    }
+
     triggerQueueWorker();
 
     const summary = summarizeQueueJob(activeJob.id);
@@ -309,7 +341,9 @@ export async function sendCampaignById(campaignId: number, overrideRatePerMinute
       alreadyQueued: true,
       queuedCount: summary.pending,
       ratePerMinute: activeJob.rate_per_minute,
+      mailProvider: activeJob.mail_provider,
       usedDefaultRate: false,
+      usedDefaultProvider: false,
     };
   }
 
@@ -327,12 +361,13 @@ export async function sendCampaignById(campaignId: number, overrideRatePerMinute
 
   const queueJob = createQueueJob({
     campaignId,
+    mailProvider,
     ratePerMinute,
     recipients,
   });
 
   if (campaign.status !== "sending") {
-    const started = await startCampaignSending(campaignId);
+    const started = await startCampaignSending(campaignId, mailProvider);
 
     if (!started) {
       const latestCampaign = await getCampaignForSending(campaignId);
@@ -351,7 +386,9 @@ export async function sendCampaignById(campaignId: number, overrideRatePerMinute
     alreadyQueued: false,
     queuedCount: queueJob.totalCount,
     ratePerMinute,
+    mailProvider,
     usedDefaultRate,
+    usedDefaultProvider,
   };
 }
 

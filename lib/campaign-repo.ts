@@ -1,5 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { getPool, queryRows } from "@/lib/db";
+import type { MailProvider } from "@/lib/mail-provider";
 import type { RecipientFilters, RecipientRow } from "@/lib/recipient-filters";
 
 export type CampaignStatus = "draft" | "sending" | "done" | "failed" | "partial" | "stopped";
@@ -9,6 +10,7 @@ export type CampaignListItem = {
   subject: string;
   recipient_count: number;
   status: CampaignStatus;
+  send_provider: MailProvider;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -33,6 +35,7 @@ export type CampaignDetail = {
   filter_json: string;
   recipient_count: number;
   status: CampaignStatus;
+  send_provider: MailProvider;
   error_message: string | null;
   created_at: string;
   started_at: string | null;
@@ -51,6 +54,7 @@ export type CampaignForSending = {
   html_content: string;
   text_content: string | null;
   status: CampaignStatus;
+  send_provider: MailProvider;
 };
 
 export type PendingCampaignRecipient = {
@@ -62,6 +66,25 @@ export type PendingCampaignRecipient = {
 export type DraftCampaignMutationResult = "ok" | "not_found" | "invalid_status";
 
 let schemaReadyPromise: Promise<void> | null = null;
+
+async function ensureMysqlColumnExists(tableName: string, columnName: string, alterSql: string) {
+  const rows = await queryRows<RowDataPacket>(
+    `
+      SELECT 1 AS v
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME = ?
+      LIMIT 1
+    `,
+    [tableName, columnName],
+  );
+
+  if (rows.length === 0) {
+    const pool = getPool();
+    await pool.execute(alterSql);
+  }
+}
 
 export function ensureCampaignSchema() {
   if (schemaReadyPromise) {
@@ -80,6 +103,7 @@ export function ensureCampaignSchema() {
         filter_json JSON NOT NULL,
         recipient_count INT NOT NULL DEFAULT 0,
         status ENUM('draft','sending','done','failed','partial','stopped') NOT NULL DEFAULT 'draft',
+        send_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid',
         error_message TEXT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         started_at DATETIME NULL,
@@ -93,6 +117,20 @@ export function ensureCampaignSchema() {
     await pool.execute(`
       ALTER TABLE marketing_campaign
       MODIFY COLUMN status ENUM('draft','sending','done','failed','partial','stopped') NOT NULL DEFAULT 'draft'
+    `);
+
+    await ensureMysqlColumnExists(
+      "marketing_campaign",
+      "send_provider",
+      `
+        ALTER TABLE marketing_campaign
+        ADD COLUMN send_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
+      `,
+    );
+
+    await pool.execute(`
+      ALTER TABLE marketing_campaign
+      MODIFY COLUMN send_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
     `);
 
     await pool.execute(`
@@ -199,6 +237,7 @@ export async function listCampaigns(limit = 50) {
         subject,
         recipient_count,
         status,
+        send_provider,
         created_at,
         started_at,
         finished_at
@@ -223,6 +262,7 @@ export async function getCampaignDetail(campaignId: number) {
         filter_json,
         recipient_count,
         status,
+        send_provider,
         error_message,
         created_at,
         started_at,
@@ -296,7 +336,7 @@ export async function getCampaignForSending(campaignId: number) {
 
   const rows = await queryRows<CampaignForSending & RowDataPacket>(
     `
-      SELECT id, subject, html_content, text_content, status
+      SELECT id, subject, html_content, text_content, status, send_provider
       FROM marketing_campaign
       WHERE id = ?
       LIMIT 1
@@ -307,17 +347,17 @@ export async function getCampaignForSending(campaignId: number) {
   return rows[0] || null;
 }
 
-export async function startCampaignSending(campaignId: number) {
+export async function startCampaignSending(campaignId: number, mailProvider: MailProvider) {
   await ensureCampaignSchema();
   const pool = getPool();
 
   const [result] = await pool.execute<ResultSetHeader>(
     `
       UPDATE marketing_campaign
-      SET status = 'sending', started_at = NOW(), finished_at = NULL, error_message = NULL
+      SET status = 'sending', send_provider = ?, started_at = NOW(), finished_at = NULL, error_message = NULL
       WHERE id = ? AND status IN ('draft', 'failed', 'partial', 'stopped')
     `,
-    [campaignId],
+    [mailProvider, campaignId],
   );
 
   return result.affectedRows > 0;

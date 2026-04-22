@@ -1,6 +1,7 @@
 import type { RowDataPacket } from "mysql2/promise";
 import { getPool, queryRows } from "@/lib/db";
 import { ensureCampaignSchema } from "@/lib/campaign-repo";
+import type { MailProvider } from "@/lib/mail-provider";
 
 export type SystemLogSource = "campaign" | "direct";
 export type SystemLogStatus = "success" | "failed";
@@ -10,6 +11,7 @@ export type SystemLogRow = {
   source: SystemLogSource;
   sourceRecordId: number;
   campaignId: number | null;
+  mailProvider: MailProvider | null;
   toEmail: string;
   userName: string;
   subject: string;
@@ -20,6 +22,25 @@ export type SystemLogRow = {
 };
 
 let directSendSchemaReadyPromise: Promise<void> | null = null;
+
+async function ensureMysqlColumnExists(tableName: string, columnName: string, alterSql: string) {
+  const rows = await queryRows<RowDataPacket>(
+    `
+      SELECT 1 AS v
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME = ?
+      LIMIT 1
+    `,
+    [tableName, columnName],
+  );
+
+  if (rows.length === 0) {
+    const pool = getPool();
+    await pool.execute(alterSql);
+  }
+}
 
 export function ensureDirectSendLogSchema() {
   if (directSendSchemaReadyPromise) {
@@ -35,6 +56,7 @@ export function ensureDirectSendLogSchema() {
         to_email VARCHAR(255) NOT NULL,
         user_name VARCHAR(128) NOT NULL,
         subject VARCHAR(255) NOT NULL,
+        mail_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid',
         content_format ENUM('html','markdown') NOT NULL DEFAULT 'html',
         send_status ENUM('success','failed') NOT NULL,
         provider_message_id VARCHAR(255) NULL,
@@ -46,6 +68,20 @@ export function ensureDirectSendLogSchema() {
         KEY idx_direct_send_log_to_email (to_email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+
+    await ensureMysqlColumnExists(
+      "direct_send_log",
+      "mail_provider",
+      `
+        ALTER TABLE direct_send_log
+        ADD COLUMN mail_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
+      `,
+    );
+
+    await pool.execute(`
+      ALTER TABLE direct_send_log
+      MODIFY COLUMN mail_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
+    `);
   })();
 
   return directSendSchemaReadyPromise;
@@ -55,6 +91,7 @@ export async function recordDirectSendLog(input: {
   toEmail: string;
   userName: string;
   subject: string;
+  mailProvider: MailProvider;
   contentFormat: "html" | "markdown";
   status: SystemLogStatus;
   providerMessageId?: string | null;
@@ -67,13 +104,14 @@ export async function recordDirectSendLog(input: {
   await pool.execute(
     `
       INSERT INTO direct_send_log
-        (to_email, user_name, subject, content_format, send_status, provider_message_id, error_message)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+        (to_email, user_name, subject, mail_provider, content_format, send_status, provider_message_id, error_message)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       input.toEmail,
       input.userName,
       input.subject,
+      input.mailProvider,
       input.contentFormat,
       input.status,
       input.providerMessageId || null,
@@ -128,6 +166,7 @@ export async function listSystemLogs(input?: {
       {
         source_record_id: number;
         campaign_id: number;
+        mail_provider: MailProvider;
         to_email: string;
         user_name: string;
         subject: string;
@@ -141,6 +180,7 @@ export async function listSystemLogs(input?: {
         SELECT
           r.id AS source_record_id,
           r.campaign_id,
+          c.send_provider AS mail_provider,
           r.email AS to_email,
           r.user_name,
           c.subject,
@@ -163,6 +203,7 @@ export async function listSystemLogs(input?: {
         source: "campaign",
         sourceRecordId: Number(row.source_record_id),
         campaignId: Number(row.campaign_id),
+        mailProvider: row.mail_provider,
         toEmail: row.to_email,
         userName: row.user_name,
         subject: row.subject,
@@ -191,6 +232,7 @@ export async function listSystemLogs(input?: {
     const rows = await queryRows<
       {
         source_record_id: number;
+        mail_provider: MailProvider;
         to_email: string;
         user_name: string;
         subject: string;
@@ -203,6 +245,7 @@ export async function listSystemLogs(input?: {
       `
         SELECT
           id AS source_record_id,
+          mail_provider,
           to_email,
           user_name,
           subject,
@@ -224,6 +267,7 @@ export async function listSystemLogs(input?: {
         source: "direct",
         sourceRecordId: Number(row.source_record_id),
         campaignId: null,
+        mailProvider: row.mail_provider,
         toEmail: row.to_email,
         userName: row.user_name,
         subject: row.subject,

@@ -13,6 +13,7 @@ type SystemLogRow = {
   source: "campaign" | "direct";
   sourceRecordId: number;
   campaignId: number | null;
+  mailProvider: "sendgrid" | "resend" | null;
   toEmail: string;
   userName: string;
   subject: string;
@@ -40,6 +41,18 @@ function formatDateTime(value: string) {
 
 function sourceLabel(source: SystemLogRow["source"]) {
   return source === "campaign" ? "任务发送" : "直接发送";
+}
+
+function providerLabel(provider: SystemLogRow["mailProvider"]) {
+  if (provider === "resend") {
+    return "Resend";
+  }
+
+  if (provider === "sendgrid") {
+    return "SendGrid";
+  }
+
+  return "-";
 }
 
 function statusVariant(status: SystemLogRow["status"]) {
@@ -141,6 +154,7 @@ export function LogsClient() {
             <TableRow>
               <TableHead>时间</TableHead>
               <TableHead>来源</TableHead>
+              <TableHead>渠道</TableHead>
               <TableHead>收件邮箱</TableHead>
               <TableHead>用户名</TableHead>
               <TableHead>主题</TableHead>
@@ -155,6 +169,7 @@ export function LogsClient() {
               <TableRow key={log.id}>
                 <TableCell>{formatDateTime(log.createdAt)}</TableCell>
                 <TableCell>{sourceLabel(log.source)}</TableCell>
+                <TableCell>{providerLabel(log.mailProvider)}</TableCell>
                 <TableCell>{log.toEmail}</TableCell>
                 <TableCell>{log.userName}</TableCell>
                 <TableCell className="max-w-xs truncate">{log.subject}</TableCell>

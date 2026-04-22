@@ -2,7 +2,7 @@
   "name": "sspanel-email",
   "version": "1.0.0",
   "private": true,
-  "description": "SSPanel email system built with Next.js + Tailwind CSS + shadcn/ui + SendGrid",
+  "description": "SSPanel email system built with Next.js + Tailwind CSS + shadcn/ui + SendGrid/Resend",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

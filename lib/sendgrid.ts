@@ -25,33 +25,13 @@ function initializeSendGrid() {
   initialized = true;
 }
 
-function replaceUserNameTemplate(content: string, userName: string) {
-  return content.replace(/{{\s*user_name\s*}}/g, userName);
-}
-
-function htmlToText(html: string) {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export async function sendOneEmail(input: {
+export async function sendViaSendGrid(input: {
   toEmail: string;
-  userName: string;
   subject: string;
   htmlContent: string;
-  textContent?: string | null;
+  textContent: string;
 }) {
   initializeSendGrid();
-
-  const personalizedSubject = replaceUserNameTemplate(input.subject, input.userName);
-  const personalizedHtml = replaceUserNameTemplate(input.htmlContent, input.userName);
-  const personalizedText = input.textContent
-    ? replaceUserNameTemplate(input.textContent, input.userName)
-    : htmlToText(personalizedHtml);
 
   const [response] = await sgMail.send({
     to: input.toEmail,
@@ -59,9 +39,9 @@ export async function sendOneEmail(input: {
       email: fromEmail,
       name: fromName,
     },
-    subject: personalizedSubject,
-    html: personalizedHtml,
-    text: personalizedText,
+    subject: input.subject,
+    html: input.htmlContent,
+    text: input.textContent,
   });
 
   const messageId = response.headers["x-message-id"];
