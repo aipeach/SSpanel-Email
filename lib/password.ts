@@ -1,5 +1,4 @@
-import bcrypt from "bcryptjs";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 function safeEqual(a: string, b: string) {
   const aBuffer = Buffer.from(a);
@@ -17,7 +16,9 @@ export async function verifyAdminPassword(inputPassword: string) {
   const plain = process.env.ADMIN_PASSWORD?.trim();
 
   if (hash) {
-    return bcrypt.compare(inputPassword, hash);
+    const inputHash = createHash("sha256").update(inputPassword, "utf8").digest("hex");
+    const normalizedHash = hash.toLowerCase();
+    return safeEqual(inputHash, normalizedHash);
   }
 
   if (plain) {

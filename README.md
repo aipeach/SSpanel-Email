@@ -40,10 +40,10 @@ cp .env.example .env
 - `DEFAULT_SEND_RATE_PER_MINUTE`（默认 60）
 - `DEFAULT_MAIL_PROVIDER`（`sendgrid` 或 `resend`，默认 `sendgrid`）
 - 管理员密码二选一：
-  - 推荐：`ADMIN_PASSWORD_HASH`
+  - 推荐：`ADMIN_PASSWORD_HASH`（SHA-256）
   - 临时：`ADMIN_PASSWORD`
 
-生成 hash：
+生成 SHA-256 hash：
 
 ```bash
 npm run hash:admin -- your_password
