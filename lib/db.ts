@@ -59,9 +59,9 @@ export function getPool() {
     charset: "utf8mb4",
   });
 
-  pool.on("connection", (connection) => {
+  pool.pool.on("connection", (connection) => {
     // 统一 MySQL 会话时区，确保 NOW()/CURRENT_TIMESTAMP 与日志展示一致。
-    void connection.query("SET time_zone = ?", [config.timeZone]).catch(() => {
+    connection.query("SET time_zone = ?", [config.timeZone], () => {
       // 忽略设置失败，保持由数据库默认时区兜底。
     });
   });
