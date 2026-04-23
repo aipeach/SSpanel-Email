@@ -31,6 +31,11 @@ const navItems = [
     label: "发送日志",
     match: (pathname: string) => pathname === "/logs",
   },
+  {
+    href: "/connection-status",
+    label: "连接状态",
+    match: (pathname: string) => pathname === "/connection-status",
+  },
 ];
 
 export function AppSidebar() {
