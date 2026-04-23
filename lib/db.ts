@@ -6,6 +6,7 @@ type DatabaseConfig = {
   user: string;
   password: string;
   database: string;
+  timeZone: string;
 };
 
 let pool: mysql.Pool | null = null;
@@ -16,6 +17,7 @@ function getDatabaseConfig(): DatabaseConfig {
   const user = process.env.MYSQL_USER;
   const password = process.env.MYSQL_PASSWORD;
   const database = process.env.MYSQL_DATABASE;
+  const timeZone = process.env.MYSQL_TIMEZONE?.trim() || "+08:00";
 
   if (!host || !user || !database) {
     throw new Error("MySQL 配置不完整，请检查 MYSQL_HOST/MYSQL_USER/MYSQL_DATABASE");
@@ -33,6 +35,7 @@ function getDatabaseConfig(): DatabaseConfig {
     user,
     password: password || "",
     database,
+    timeZone,
   };
 }
 
@@ -54,6 +57,13 @@ export function getPool() {
     idleTimeout: 60_000,
     queueLimit: 0,
     charset: "utf8mb4",
+  });
+
+  pool.on("connection", (connection) => {
+    // 统一 MySQL 会话时区，确保 NOW()/CURRENT_TIMESTAMP 与日志展示一致。
+    void connection.query("SET time_zone = ?", [config.timeZone]).catch(() => {
+      // 忽略设置失败，保持由数据库默认时区兜底。
+    });
   });
 
   return pool;
