@@ -16,7 +16,7 @@ type CampaignDetail = {
   subject: string;
   html_content: string;
   text_content: string | null;
-  filter_json: string;
+  filter_json: unknown;
   recipient_count: number;
   status: "draft" | "sending" | "done" | "failed" | "partial" | "stopped";
   send_provider: "sendgrid" | "resend";
@@ -70,6 +70,22 @@ function statusText(status: CampaignDetail["status"]) {
   if (status === "failed") return "失败";
   if (status === "partial") return "部分成功";
   return "已停止";
+}
+
+function formatFilterJson(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return "{}";
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) {
@@ -410,7 +426,9 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
           <CardTitle>筛选快照</CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="overflow-x-auto rounded-xl bg-slate-900 p-4 text-xs leading-6 text-slate-100">{campaign.filter_json}</pre>
+          <pre className="overflow-x-auto rounded-xl bg-slate-900 p-4 text-xs leading-6 text-slate-100">
+            {formatFilterJson(campaign.filter_json)}
+          </pre>
         </CardContent>
       </Card>
 

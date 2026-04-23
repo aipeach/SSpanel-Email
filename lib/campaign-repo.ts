@@ -67,6 +67,22 @@ export type DraftCampaignMutationResult = "ok" | "not_found" | "invalid_status";
 
 let schemaReadyPromise: Promise<void> | null = null;
 
+function normalizeJsonField(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return "{}";
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "{}";
+  }
+}
+
 async function ensureMysqlColumnExists(tableName: string, columnName: string, alterSql: string) {
   const rows = await queryRows<RowDataPacket>(
     `
@@ -252,7 +268,11 @@ export async function listCampaigns(limit = 50) {
 export async function getCampaignDetail(campaignId: number) {
   await ensureCampaignSchema();
 
-  const campaigns = await queryRows<(Omit<CampaignDetail, "stats" | "sampleRecipients"> & RowDataPacket)>(
+  const campaigns = await queryRows<
+    (Omit<CampaignDetail, "stats" | "sampleRecipients" | "filter_json"> & {
+      filter_json: unknown;
+    } & RowDataPacket)
+  >(
     `
       SELECT
         id,
@@ -326,6 +346,7 @@ export async function getCampaignDetail(campaignId: number) {
 
   return {
     ...campaign,
+    filter_json: normalizeJsonField(campaign.filter_json),
     stats,
     sampleRecipients,
   } satisfies CampaignDetail;

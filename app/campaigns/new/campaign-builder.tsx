@@ -49,7 +49,7 @@ type CampaignDetailPayload = {
   subject: string;
   html_content: string;
   text_content: string | null;
-  filter_json: string;
+  filter_json: unknown;
   recipient_count: number;
   status: "draft" | "sending" | "done" | "failed" | "partial" | "stopped";
 };
@@ -146,9 +146,10 @@ function toCsv(values: unknown) {
   return normalized.join(",");
 }
 
-function parseStoredFilters(filterJson: string) {
+function parseStoredFilters(filterJson: unknown) {
   try {
-    const parsed = JSON.parse(filterJson) as StoredFilters;
+    const parsed =
+      typeof filterJson === "string" ? (JSON.parse(filterJson) as StoredFilters) : (filterJson as StoredFilters);
 
     return {
       userIdsCsv: toCsv(parsed.userIds),
