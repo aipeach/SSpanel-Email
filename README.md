@@ -15,7 +15,7 @@
 - 高级筛选：`reg_date`、`last_day_t`、`class`、`class_expire`、`node_group`、`is_admin`、`enable`
 - 邮件任务创建、任务列表、任务详情
 - SendGrid / Resend 异步队列发送（SQLite 持久化队列）+ 发送状态回写
-- 直接发送支持在 SendGrid 与 Resend 之间切换
+- 直接发送支持多邮箱批量发送，并可在 SendGrid 与 Resend 之间切换
 - 默认发送速率控制，且支持每次发送覆盖速率
 
 ## 1. 安装依赖

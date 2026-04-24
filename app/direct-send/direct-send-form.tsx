@@ -11,8 +11,28 @@ import { Textarea } from "@/components/ui/textarea";
 type ContentFormat = "html" | "markdown";
 type MailProvider = "sendgrid" | "resend";
 
+function parseEmailsInput(raw: string) {
+  const emailSet = new Set<string>();
+  const emails: string[] = [];
+  const chunks = raw
+    .split(/[\n,;，；\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  for (const email of chunks) {
+    const dedupeKey = email.toLowerCase();
+
+    if (!emailSet.has(dedupeKey)) {
+      emailSet.add(dedupeKey);
+      emails.push(email);
+    }
+  }
+
+  return emails;
+}
+
 export function DirectSendForm() {
-  const [toEmail, setToEmail] = useState("");
+  const [toEmailsText, setToEmailsText] = useState("");
   const [userName, setUserName] = useState("");
   const [subject, setSubject] = useState("");
   const [mailProvider, setMailProvider] = useState<MailProvider>("sendgrid");
@@ -38,7 +58,7 @@ export function DirectSendForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          toEmail,
+          toEmails: parseEmailsInput(toEmailsText),
           userName,
           subject,
           mailProvider,
@@ -50,7 +70,17 @@ export function DirectSendForm() {
       });
 
       const payload = (await response.json()) as {
+        ok?: boolean;
+        total?: number;
+        successCount?: number;
+        failedCount?: number;
         messageId?: string | null;
+        results?: Array<{
+          toEmail: string;
+          status: "success" | "failed";
+          messageId: string | null;
+          errorMessage: string | null;
+        }>;
         error?: string;
       };
 
@@ -59,10 +89,24 @@ export function DirectSendForm() {
         return;
       }
 
-      if (payload.messageId) {
-        setNotice(`发送成功（渠道 ${mailProvider}），Message ID: ${payload.messageId}`);
+      const total = payload.total || 0;
+      const successCount = payload.successCount || 0;
+      const failedCount = payload.failedCount || 0;
+      const summary = `总计 ${total}，成功 ${successCount}，失败 ${failedCount}（渠道 ${mailProvider}）`;
+
+      if (failedCount > 0) {
+        const failedEmails = (payload.results || [])
+          .filter((item) => item.status === "failed")
+          .map((item) => item.toEmail);
+        const preview = failedEmails.slice(0, 5).join("、");
+        const suffix = failedEmails.length > 5 ? " 等" : "";
+        setError(`部分发送失败：${summary}${preview ? `；失败邮箱：${preview}${suffix}` : ""}`);
       } else {
-        setNotice(`发送成功（渠道 ${mailProvider}）`);
+        if (payload.messageId && total === 1) {
+          setNotice(`发送成功：${summary}，Message ID: ${payload.messageId}`);
+        } else {
+          setNotice(`发送成功：${summary}`);
+        }
       }
     } catch {
       setError("发送失败，请稍后重试");
@@ -72,6 +116,7 @@ export function DirectSendForm() {
   }
 
   const hasContent = contentFormat === "html" ? htmlContent.trim().length > 0 : markdownContent.trim().length > 0;
+  const recipientCount = parseEmailsInput(toEmailsText).length;
 
   return (
     <Card>
@@ -81,19 +126,20 @@ export function DirectSendForm() {
       <CardContent>
         <form className="grid gap-4" onSubmit={onSubmit}>
           <div className="grid gap-2">
-            <Label htmlFor="toEmail">收件邮箱</Label>
-            <Input
-              id="toEmail"
-              type="email"
-              value={toEmail}
-              onChange={(event) => setToEmail(event.target.value)}
-              placeholder="user@example.com"
+            <Label htmlFor="toEmails">收件邮箱（支持多个）</Label>
+            <Textarea
+              id="toEmails"
+              rows={4}
+              value={toEmailsText}
+              onChange={(event) => setToEmailsText(event.target.value)}
+              placeholder={"支持换行或逗号分隔，例如：\nuser1@example.com\nuser2@example.com"}
               required
             />
+            <p className="text-xs text-slate-500">已识别收件人：{recipientCount}</p>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="userName">收件用户名（可选）</Label>
+            <Label htmlFor="userName">收件用户名（可选，批量时会统一使用）</Label>
             <Input
               id="userName"
               value={userName}
@@ -165,7 +211,7 @@ export function DirectSendForm() {
           {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : null}
           {notice ? <p className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-700">{notice}</p> : null}
 
-          <Button type="submit" disabled={submitting || !toEmail || !subject || !hasContent} className="w-fit">
+          <Button type="submit" disabled={submitting || recipientCount === 0 || !subject || !hasContent} className="w-fit">
             {submitting ? "发送中..." : "立即发送"}
           </Button>
         </form>
