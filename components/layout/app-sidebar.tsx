@@ -57,7 +57,7 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className="flex h-full min-h-screen w-full flex-col gap-6 border-r border-slate-200 bg-white/90 px-4 py-6 backdrop-blur md:w-64 md:px-5">
+    <aside className="flex h-full min-h-screen w-full flex-col gap-6 border-r border-slate-200 bg-white/90 px-4 py-6 backdrop-blur md:sticky md:top-0 md:h-screen md:self-start md:w-64 md:overflow-y-auto md:px-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-600">SSPanel 邮件系统</p>
         <p className="mt-2 text-sm text-slate-600">发件任务与用户筛选控制台</p>
