@@ -47,7 +47,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     settings: listEditableConfigFields(),
-    note: "当前页面仅支持发件策略、SendGrid、Resend、SMTP 配置；读取优先级：.env > SQLite。",
+    note: "当前页面仅支持发件策略、SendGrid、Resend、SMTP 配置；读取优先级：SQLite > .env。",
   });
 }
 
@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       settings: listEditableConfigFields(),
-      note: "配置已保存。当前仅发件相关配置支持 SQLite 回退；若同名 .env 已配置，运行时会优先使用 .env。",
+      note: "配置已保存。当前仅发件相关配置支持 SQLite；读取优先级：SQLite > .env。",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

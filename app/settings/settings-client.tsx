@@ -36,11 +36,11 @@ type SettingsResponse = {
 
 function sourceLabel(source: ConfigSource) {
   if (source === "env") {
-    return "env（优先）";
+    return "env（回退）";
   }
 
   if (source === "sqlite") {
-    return "sqlite";
+    return "sqlite（优先）";
   }
 
   return "未设置";
@@ -203,8 +203,11 @@ export function SettingsClient() {
                   />
                 )}
 
+                {item.source === "sqlite" ? (
+                  <p className="text-xs text-emerald-700">当前值来自 SQLite，将优先于 .env 同名配置。</p>
+                ) : null}
                 {item.source === "env" ? (
-                  <p className="text-xs text-amber-600">当前值来自 .env，SQLite 同名配置将被覆盖。</p>
+                  <p className="text-xs text-amber-600">当前值来自 .env（SQLite 未设置该项）。</p>
                 ) : null}
               </div>
             ))}
@@ -221,4 +224,3 @@ export function SettingsClient() {
     </form>
   );
 }
-

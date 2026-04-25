@@ -231,37 +231,38 @@ export function getStoredConfigValue(key: string) {
 }
 
 export function getConfigValue(key: string) {
-  const envValue = getEnvValue(key);
+  if (SQLITE_FALLBACK_KEY_SET.has(key)) {
+    const stored = getStoredConfigValue(key);
 
-  if (envValue !== null) {
-    return envValue;
+    if (stored !== null) {
+      return stored;
+    }
+
+    return getEnvValue(key);
   }
 
-  if (!SQLITE_FALLBACK_KEY_SET.has(key)) {
-    return null;
-  }
-
-  return getStoredConfigValue(key);
+  return getEnvValue(key);
 }
 
 export function getConfigSource(key: string): ConfigSource {
-  const envValue = getEnvValue(key);
+  if (SQLITE_FALLBACK_KEY_SET.has(key)) {
+    const stored = getStoredConfigValue(key);
 
-  if (envValue !== null) {
-    return "env";
-  }
+    if (stored !== null) {
+      return "sqlite";
+    }
 
-  if (!SQLITE_FALLBACK_KEY_SET.has(key)) {
+    const envValue = getEnvValue(key);
+
+    if (envValue !== null) {
+      return "env";
+    }
+
     return "unset";
   }
 
-  const stored = getStoredConfigValue(key);
-
-  if (stored !== null) {
-    return "sqlite";
-  }
-
-  return "unset";
+  const envValue = getEnvValue(key);
+  return envValue !== null ? "env" : "unset";
 }
 
 export function listEditableConfigFields(): ConfigFieldWithValue[] {
