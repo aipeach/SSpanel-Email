@@ -2,6 +2,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { NextResponse } from "next/server";
 import { queryRows } from "@/lib/db";
 import { getQueueDb } from "@/lib/queue-sqlite";
+import { getConfigSource, getConfigValue } from "@/lib/runtime-config";
 
 type Status = "ok" | "error";
 
@@ -64,10 +65,13 @@ async function checkMySqlStatus(): Promise<ServiceStatus> {
       latencyMs: Date.now() - start,
       message: "连接正常",
       details: {
-        host: process.env.MYSQL_HOST || null,
-        port: Number(process.env.MYSQL_PORT || "3306"),
-        database: process.env.MYSQL_DATABASE || null,
-        configuredTimeZone: process.env.MYSQL_TIMEZONE?.trim() || "+08:00",
+        host: getConfigValue("MYSQL_HOST") || null,
+        port: Number(getConfigValue("MYSQL_PORT") || "3306"),
+        database: getConfigValue("MYSQL_DATABASE") || null,
+        configuredTimeZone: getConfigValue("MYSQL_TIMEZONE")?.trim() || "+08:00",
+        hostSource: getConfigSource("MYSQL_HOST"),
+        databaseSource: getConfigSource("MYSQL_DATABASE"),
+        configuredTimeZoneSource: getConfigSource("MYSQL_TIMEZONE"),
         sessionTimeZone: row?.session_time_zone || null,
         globalTimeZone: row?.global_time_zone || null,
         systemTimeZone: row?.system_time_zone || null,
@@ -82,10 +86,13 @@ async function checkMySqlStatus(): Promise<ServiceStatus> {
       latencyMs: Date.now() - start,
       message: getErrorMessage(error),
       details: {
-        host: process.env.MYSQL_HOST || null,
-        port: Number(process.env.MYSQL_PORT || "3306"),
-        database: process.env.MYSQL_DATABASE || null,
-        configuredTimeZone: process.env.MYSQL_TIMEZONE?.trim() || "+08:00",
+        host: getConfigValue("MYSQL_HOST") || null,
+        port: Number(getConfigValue("MYSQL_PORT") || "3306"),
+        database: getConfigValue("MYSQL_DATABASE") || null,
+        configuredTimeZone: getConfigValue("MYSQL_TIMEZONE")?.trim() || "+08:00",
+        hostSource: getConfigSource("MYSQL_HOST"),
+        databaseSource: getConfigSource("MYSQL_DATABASE"),
+        configuredTimeZoneSource: getConfigSource("MYSQL_TIMEZONE"),
       },
     };
   }
@@ -118,7 +125,8 @@ function checkSqliteStatus(): ServiceStatus {
       latencyMs: Date.now() - start,
       message: "连接正常",
       details: {
-        queueDbPath: process.env.QUEUE_SQLITE_PATH?.trim() || "./data/email-queue.sqlite",
+        queueDbPath: getConfigValue("QUEUE_SQLITE_PATH")?.trim() || "./data/email-queue.sqlite",
+        queueDbPathSource: getConfigSource("QUEUE_SQLITE_PATH"),
         sqliteVersion: row?.sqlite_version || null,
         nowUtc: row?.now_utc || null,
         nowLocal: row?.now_local || null,
@@ -130,7 +138,8 @@ function checkSqliteStatus(): ServiceStatus {
       latencyMs: Date.now() - start,
       message: getErrorMessage(error),
       details: {
-        queueDbPath: process.env.QUEUE_SQLITE_PATH?.trim() || "./data/email-queue.sqlite",
+        queueDbPath: getConfigValue("QUEUE_SQLITE_PATH")?.trim() || "./data/email-queue.sqlite",
+        queueDbPathSource: getConfigSource("QUEUE_SQLITE_PATH"),
       },
     };
   }
@@ -152,4 +161,3 @@ export async function GET() {
     sqlite,
   });
 }
-

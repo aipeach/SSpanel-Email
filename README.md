@@ -17,6 +17,7 @@
 - SendGrid / Resend / SMTP 异步队列发送（SQLite 持久化队列）+ 发送状态回写
 - 直接发送支持多邮箱批量发送，并可在 SendGrid / Resend / SMTP 之间切换
 - 前端发件渠道下拉会根据 `.env` 已配置的渠道动态显示（未配置不显示）
+- 提供“编辑配置”页面，配置写入 SQLite，读取优先级为 `.env` > SQLite
 - 默认发送速率控制，且支持每次发送覆盖速率
 
 ## 1. 安装依赖
@@ -40,6 +41,7 @@ cp .env.example .env
 - `RESEND_API_KEY` `RESEND_FROM_EMAIL` `RESEND_FROM_NAME`
 - `SMTP_HOST` `SMTP_PORT` `SMTP_SECURE` `SMTP_USER` `SMTP_PASS` `SMTP_FROM_EMAIL` `SMTP_FROM_NAME`
 - `QUEUE_SQLITE_PATH`（默认 `./data/email-queue.sqlite`）
+- `APP_CONFIG_SQLITE_PATH`（默认 `./data/app-config.sqlite`）
 - `DEFAULT_SEND_RATE_PER_MINUTE`（默认 60）
 - `DEFAULT_MAIL_PROVIDER`（`sendgrid` / `resend` / `smtp`，默认 `sendgrid`）
 - 管理员密码二选一：

@@ -1,27 +1,33 @@
 import sgMail from "@sendgrid/mail";
+import { getConfigValue } from "@/lib/runtime-config";
 
 let initialized = false;
+let currentSignature = "";
 let fromEmail = "";
 let fromName = "";
 
 function initializeSendGrid() {
-  if (initialized) {
-    return;
-  }
-
-  const apiKey = process.env.SENDGRID_API_KEY;
-  fromEmail = process.env.SENDGRID_FROM_EMAIL || "";
-  fromName = process.env.SENDGRID_FROM_NAME || "SSPanel";
+  const apiKey = getConfigValue("SENDGRID_API_KEY")?.trim() || "";
+  const nextFromEmail = getConfigValue("SENDGRID_FROM_EMAIL")?.trim() || "";
+  const nextFromName = getConfigValue("SENDGRID_FROM_NAME")?.trim() || "SSPanel";
+  const nextSignature = `${apiKey}|${nextFromEmail}|${nextFromName}`;
 
   if (!apiKey) {
     throw new Error("SENDGRID_API_KEY 未配置");
   }
 
-  if (!fromEmail) {
+  if (!nextFromEmail) {
     throw new Error("SENDGRID_FROM_EMAIL 未配置");
   }
 
+  if (initialized && currentSignature === nextSignature) {
+    return;
+  }
+
+  fromEmail = nextFromEmail;
+  fromName = nextFromName;
   sgMail.setApiKey(apiKey);
+  currentSignature = nextSignature;
   initialized = true;
 }
 

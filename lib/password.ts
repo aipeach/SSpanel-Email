@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { getConfigValue } from "@/lib/runtime-config";
 
 function safeEqual(a: string, b: string) {
   const aBuffer = Buffer.from(a);
@@ -12,8 +13,8 @@ function safeEqual(a: string, b: string) {
 }
 
 export async function verifyAdminPassword(inputPassword: string) {
-  const hash = process.env.ADMIN_PASSWORD_HASH?.trim();
-  const plain = process.env.ADMIN_PASSWORD?.trim();
+  const hash = getConfigValue("ADMIN_PASSWORD_HASH")?.trim();
+  const plain = getConfigValue("ADMIN_PASSWORD")?.trim();
 
   if (hash) {
     const inputHash = createHash("sha256").update(inputPassword, "utf8").digest("hex");

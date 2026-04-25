@@ -37,10 +37,13 @@
 - SSPanel MySQL：`user`（只读）
 - 系统 MySQL：任务、收件人发送结果、直接发送日志
 - 系统 SQLite：异步队列作业与队列项
+- 系统 SQLite：配置中心（`app_config`）
 
 ## 4. 配置项
 
-系统通过环境变量读取配置：
+系统配置来源优先级：
+- `.env`（优先）
+- SQLite 配置中心（回退）
 
 - 管理员登录
   - `ADMIN_PASSWORD_HASH`（优先，SHA-256）
@@ -72,6 +75,7 @@
   - `SMTP_FROM_NAME`
 - 异步队列
   - `QUEUE_SQLITE_PATH`
+  - `APP_CONFIG_SQLITE_PATH`
   - `DEFAULT_SEND_RATE_PER_MINUTE`
   - `DEFAULT_MAIL_PROVIDER`（`sendgrid` / `resend` / `smtp`）
 
@@ -100,8 +104,9 @@
 - `/direct-send`：直接发送（支持多邮箱）
 - `/logs`：发送日志查询
 - `/connection-status`：数据库连接状态
+- `/settings`：编辑配置（写入 SQLite 配置中心）
 
-侧边栏统一入口：用户概览、任务列表、创建任务、直接发送、发送日志、连接状态。
+侧边栏统一入口：用户概览、任务列表、创建任务、直接发送、发送日志、连接状态、编辑配置。
 
 ## 7. 数据模型
 
@@ -296,10 +301,11 @@ UI 侧流量单位：
 - 管理员密码优先使用 SHA-256 hash 校验。
 - 所有筛选查询使用参数化 SQL。
 - 排序字段使用白名单映射，避免 SQL 注入。
-- 敏感配置仅从环境变量读取，不入库。
+- 配置读取优先级为 `.env` > SQLite；若环境变量已配置，同名 SQLite 配置不会生效。
 
 ## 14. 运行与初始化说明
 
 - 系统会在运行时自动创建/迁移业务表（`CREATE TABLE IF NOT EXISTS` + 必要 `ALTER`）。
 - 首次运行前仍建议先执行 `db/schema.sql` 初始化基础表结构。
 - SQLite 队列文件路径由 `QUEUE_SQLITE_PATH` 控制。
+- SQLite 配置中心文件路径由 `APP_CONFIG_SQLITE_PATH` 控制（默认 `./data/app-config.sqlite`）。

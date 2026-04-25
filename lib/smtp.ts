@@ -1,6 +1,8 @@
 import nodemailer from "nodemailer";
+import { getConfigValue } from "@/lib/runtime-config";
 
 let initialized = false;
+let currentSignature = "";
 let transporter: nodemailer.Transporter | null = null;
 let fromEmail = "";
 let fromName = "";
@@ -15,18 +17,14 @@ function parseSecureValue(value: string | undefined) {
 }
 
 function initializeSmtp() {
-  if (initialized) {
-    return;
-  }
+  const host = getConfigValue("SMTP_HOST")?.trim() || "";
+  const portRaw = getConfigValue("SMTP_PORT")?.trim() || "";
+  const user = getConfigValue("SMTP_USER")?.trim() || "";
+  const pass = getConfigValue("SMTP_PASS")?.trim() || "";
+  const secure = parseSecureValue(getConfigValue("SMTP_SECURE") || undefined);
 
-  const host = process.env.SMTP_HOST?.trim() || "";
-  const portRaw = process.env.SMTP_PORT?.trim() || "";
-  const user = process.env.SMTP_USER?.trim() || "";
-  const pass = process.env.SMTP_PASS?.trim() || "";
-  const secure = parseSecureValue(process.env.SMTP_SECURE);
-
-  fromEmail = process.env.SMTP_FROM_EMAIL?.trim() || "";
-  fromName = process.env.SMTP_FROM_NAME?.trim() || "SSPanel";
+  const nextFromEmail = getConfigValue("SMTP_FROM_EMAIL")?.trim() || "";
+  const nextFromName = getConfigValue("SMTP_FROM_NAME")?.trim() || "SSPanel";
 
   if (!host) {
     throw new Error("SMTP_HOST 未配置");
@@ -50,9 +48,18 @@ function initializeSmtp() {
     throw new Error("SMTP_PASS 未配置");
   }
 
-  if (!fromEmail) {
+  if (!nextFromEmail) {
     throw new Error("SMTP_FROM_EMAIL 未配置");
   }
+
+  const nextSignature = `${host}|${portRaw}|${secure ? "1" : "0"}|${user}|${pass}|${nextFromEmail}|${nextFromName}`;
+
+  if (initialized && currentSignature === nextSignature) {
+    return;
+  }
+
+  fromEmail = nextFromEmail;
+  fromName = nextFromName;
 
   transporter = nodemailer.createTransport({
     host,
@@ -64,6 +71,7 @@ function initializeSmtp() {
     },
   });
 
+  currentSignature = nextSignature;
   initialized = true;
 }
 
@@ -89,4 +97,3 @@ export async function sendViaSmtp(input: {
 
   return info.messageId || null;
 }
-

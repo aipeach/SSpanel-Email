@@ -8,6 +8,7 @@ import {
   startCampaignSending,
 } from "@/lib/campaign-repo";
 import { MailProviderConfigError, normalizeMailProvider, sendOneEmail, type MailProvider } from "@/lib/mail-provider";
+import { getConfigValue } from "@/lib/runtime-config";
 import {
   claimNextQueueJob,
   createQueueJob,
@@ -52,7 +53,7 @@ function normalizeRatePerMinute(value: number, fieldName: string) {
 }
 
 export function getDefaultRatePerMinute() {
-  const raw = process.env.DEFAULT_SEND_RATE_PER_MINUTE?.trim();
+  const raw = getConfigValue("DEFAULT_SEND_RATE_PER_MINUTE")?.trim();
 
   if (!raw) {
     return 60;
@@ -78,7 +79,7 @@ function resolveRatePerMinute(overrideRatePerMinute?: number) {
 
 export function getDefaultMailProvider() {
   try {
-    return normalizeMailProvider(process.env.DEFAULT_MAIL_PROVIDER?.trim() || undefined);
+    return normalizeMailProvider(getConfigValue("DEFAULT_MAIL_PROVIDER")?.trim() || undefined);
   } catch (error) {
     if (error instanceof MailProviderConfigError) {
       throw new CampaignSendError(error.message, error.status);

@@ -1,25 +1,35 @@
+import { getConfigValue } from "@/lib/runtime-config";
+
 let initialized = false;
+let currentSignature = "";
 let apiKey = "";
 let fromEmail = "";
 let fromName = "";
 
 function initializeResend() {
-  if (initialized) {
-    return;
-  }
+  const nextApiKey = getConfigValue("RESEND_API_KEY")?.trim() || "";
+  const nextFromEmail =
+    getConfigValue("RESEND_FROM_EMAIL")?.trim() || getConfigValue("SENDGRID_FROM_EMAIL")?.trim() || "";
+  const nextFromName =
+    getConfigValue("RESEND_FROM_NAME")?.trim() || getConfigValue("SENDGRID_FROM_NAME")?.trim() || "SSPanel";
+  const nextSignature = `${nextApiKey}|${nextFromEmail}|${nextFromName}`;
 
-  apiKey = process.env.RESEND_API_KEY?.trim() || "";
-  fromEmail = process.env.RESEND_FROM_EMAIL?.trim() || process.env.SENDGRID_FROM_EMAIL?.trim() || "";
-  fromName = process.env.RESEND_FROM_NAME?.trim() || process.env.SENDGRID_FROM_NAME?.trim() || "SSPanel";
-
-  if (!apiKey) {
+  if (!nextApiKey) {
     throw new Error("RESEND_API_KEY 未配置");
   }
 
-  if (!fromEmail) {
+  if (!nextFromEmail) {
     throw new Error("RESEND_FROM_EMAIL 未配置");
   }
 
+  if (initialized && currentSignature === nextSignature) {
+    return;
+  }
+
+  apiKey = nextApiKey;
+  fromEmail = nextFromEmail;
+  fromName = nextFromName;
+  currentSignature = nextSignature;
   initialized = true;
 }
 

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { MailProvider } from "@/lib/mail-provider";
+import { getConfigValue } from "@/lib/runtime-config";
 
 export type QueueJobStatus = "queued" | "running" | "done" | "failed" | "partial";
 export type QueueItemStatus = "pending" | "success" | "failed";
@@ -49,7 +50,7 @@ function ensureColumnExists(db: DatabaseSync, tableName: string, columnName: str
 
 function resolveQueueDbPath() {
   const projectRoot = /*turbopackIgnore: true*/ process.cwd();
-  const configured = process.env.QUEUE_SQLITE_PATH?.trim();
+  const configured = getConfigValue("QUEUE_SQLITE_PATH")?.trim();
 
   if (!configured) {
     return path.join(projectRoot, "data", "email-queue.sqlite");

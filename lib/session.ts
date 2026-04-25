@@ -1,4 +1,5 @@
 import { jwtVerify, SignJWT } from "jose";
+import { getConfigValue } from "@/lib/runtime-config";
 
 export const SESSION_COOKIE_NAME = "sspanel_email_session";
 const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 12;
@@ -8,7 +9,7 @@ type SessionPayload = {
 };
 
 function getSessionSecret() {
-  const secret = process.env.SESSION_SECRET;
+  const secret = getConfigValue("SESSION_SECRET");
   if (!secret || secret.length < 32) {
     throw new Error("SESSION_SECRET 未配置或长度不足 32 位");
   }

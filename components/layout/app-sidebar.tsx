@@ -36,6 +36,11 @@ const navItems = [
     label: "连接状态",
     match: (pathname: string) => pathname === "/connection-status",
   },
+  {
+    href: "/settings",
+    label: "编辑配置",
+    match: (pathname: string) => pathname === "/settings",
+  },
 ];
 
 export function AppSidebar() {

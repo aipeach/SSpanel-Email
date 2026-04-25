@@ -1,6 +1,7 @@
 import { sendViaResend } from "@/lib/resend";
 import { sendViaSendGrid } from "@/lib/sendgrid";
 import { sendViaSmtp } from "@/lib/smtp";
+import { getConfigValue } from "@/lib/runtime-config";
 
 export type MailProvider = "sendgrid" | "resend" | "smtp";
 
@@ -17,23 +18,23 @@ export class MailProviderConfigError extends Error {
 }
 
 function hasSendGridConfig() {
-  const apiKey = process.env.SENDGRID_API_KEY?.trim();
-  const fromEmail = process.env.SENDGRID_FROM_EMAIL?.trim();
+  const apiKey = getConfigValue("SENDGRID_API_KEY")?.trim();
+  const fromEmail = getConfigValue("SENDGRID_FROM_EMAIL")?.trim();
   return Boolean(apiKey && fromEmail);
 }
 
 function hasResendConfig() {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim() || process.env.SENDGRID_FROM_EMAIL?.trim();
+  const apiKey = getConfigValue("RESEND_API_KEY")?.trim();
+  const fromEmail = getConfigValue("RESEND_FROM_EMAIL")?.trim() || getConfigValue("SENDGRID_FROM_EMAIL")?.trim();
   return Boolean(apiKey && fromEmail);
 }
 
 function hasSmtpConfig() {
-  const host = process.env.SMTP_HOST?.trim();
-  const port = process.env.SMTP_PORT?.trim();
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim();
-  const fromEmail = process.env.SMTP_FROM_EMAIL?.trim();
+  const host = getConfigValue("SMTP_HOST")?.trim();
+  const port = getConfigValue("SMTP_PORT")?.trim();
+  const user = getConfigValue("SMTP_USER")?.trim();
+  const pass = getConfigValue("SMTP_PASS")?.trim();
+  const fromEmail = getConfigValue("SMTP_FROM_EMAIL")?.trim();
   return Boolean(host && port && user && pass && fromEmail);
 }
 
@@ -108,7 +109,7 @@ export function normalizeMailProvider(input?: string | null) {
     return provider;
   }
 
-  const fromEnv = process.env.DEFAULT_MAIL_PROVIDER?.trim();
+  const fromEnv = getConfigValue("DEFAULT_MAIL_PROVIDER")?.trim();
 
   if (fromEnv && MAIL_PROVIDERS.includes(fromEnv as MailProvider)) {
     const provider = fromEnv as MailProvider;

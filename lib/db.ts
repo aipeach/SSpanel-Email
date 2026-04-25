@@ -1,4 +1,5 @@
 import mysql from "mysql2/promise";
+import { getConfigValue } from "@/lib/runtime-config";
 
 type DatabaseConfig = {
   host: string;
@@ -12,12 +13,12 @@ type DatabaseConfig = {
 let pool: mysql.Pool | null = null;
 
 function getDatabaseConfig(): DatabaseConfig {
-  const host = process.env.MYSQL_HOST;
-  const portRaw = process.env.MYSQL_PORT;
-  const user = process.env.MYSQL_USER;
-  const password = process.env.MYSQL_PASSWORD;
-  const database = process.env.MYSQL_DATABASE;
-  const timeZone = process.env.MYSQL_TIMEZONE?.trim() || "+08:00";
+  const host = getConfigValue("MYSQL_HOST");
+  const portRaw = getConfigValue("MYSQL_PORT");
+  const user = getConfigValue("MYSQL_USER");
+  const password = getConfigValue("MYSQL_PASSWORD");
+  const database = getConfigValue("MYSQL_DATABASE");
+  const timeZone = getConfigValue("MYSQL_TIMEZONE")?.trim() || "+08:00";
 
   if (!host || !user || !database) {
     throw new Error("MySQL 配置不完整，请检查 MYSQL_HOST/MYSQL_USER/MYSQL_DATABASE");
