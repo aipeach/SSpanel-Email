@@ -10,7 +10,7 @@ type RouteContext = {
 
 const payloadSchema = z.object({
   ratePerMinute: z.number().int().min(1).max(100_000).optional(),
-  mailProvider: z.enum(["sendgrid", "resend"]).optional(),
+  mailProvider: z.enum(["sendgrid", "resend", "smtp"]).optional(),
 });
 
 export async function POST(request: NextRequest, context: RouteContext) {

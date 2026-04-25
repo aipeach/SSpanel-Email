@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,14 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type ContentFormat = "html" | "markdown";
-type MailProvider = "sendgrid" | "resend";
+type MailProvider = "sendgrid" | "resend" | "smtp";
+
+type MailProvidersResponse = {
+  providers: MailProvider[];
+  defaultProvider: MailProvider | null;
+  labels: Record<MailProvider, string>;
+  error?: string;
+};
 
 function parseEmailsInput(raw: string) {
   const emailSet = new Set<string>();
@@ -36,6 +43,12 @@ export function DirectSendForm() {
   const [userName, setUserName] = useState("");
   const [subject, setSubject] = useState("");
   const [mailProvider, setMailProvider] = useState<MailProvider>("sendgrid");
+  const [availableProviders, setAvailableProviders] = useState<MailProvider[]>([]);
+  const [providerLabels, setProviderLabels] = useState<Record<MailProvider, string>>({
+    sendgrid: "SendGrid",
+    resend: "Resend",
+    smtp: "SMTP",
+  });
   const [contentFormat, setContentFormat] = useState<ContentFormat>("html");
   const [htmlContent, setHtmlContent] = useState("");
   const [markdownContent, setMarkdownContent] = useState("");
@@ -44,6 +57,55 @@ export function DirectSendForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadMailProviders() {
+      try {
+        const response = await fetch("/api/mail-providers", { method: "GET" });
+        const payload = (await response.json()) as MailProvidersResponse;
+
+        if (!response.ok) {
+          if (alive) {
+            setError(payload.error || "加载发件渠道失败");
+          }
+          return;
+        }
+
+        if (!alive) {
+          return;
+        }
+
+        const providers = payload.providers || [];
+        setProviderLabels(payload.labels || { sendgrid: "SendGrid", resend: "Resend", smtp: "SMTP" });
+        setAvailableProviders(providers);
+
+        if (providers.length === 0) {
+          setError("未配置可用发件渠道，请先在 .env 配置 SendGrid、Resend 或 SMTP 参数");
+          return;
+        }
+
+        setError("");
+
+        const preferredProvider =
+          (payload.defaultProvider && providers.includes(payload.defaultProvider) && payload.defaultProvider) ||
+          providers[0];
+
+        setMailProvider(preferredProvider);
+      } catch {
+        if (alive) {
+          setError("加载发件渠道失败，请稍后重试");
+        }
+      }
+    }
+
+    void loadMailProviders();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,7 +154,7 @@ export function DirectSendForm() {
       const total = payload.total || 0;
       const successCount = payload.successCount || 0;
       const failedCount = payload.failedCount || 0;
-      const summary = `总计 ${total}，成功 ${successCount}，失败 ${failedCount}（渠道 ${mailProvider}）`;
+      const summary = `总计 ${total}，成功 ${successCount}，失败 ${failedCount}（渠道 ${providerLabels[mailProvider] || mailProvider}）`;
 
       if (failedCount > 0) {
         const failedEmails = (payload.results || [])
@@ -117,6 +179,7 @@ export function DirectSendForm() {
 
   const hasContent = contentFormat === "html" ? htmlContent.trim().length > 0 : markdownContent.trim().length > 0;
   const recipientCount = parseEmailsInput(toEmailsText).length;
+  const hasProvider = availableProviders.length > 0;
 
   return (
     <Card>
@@ -159,10 +222,15 @@ export function DirectSendForm() {
               id="mailProvider"
               value={mailProvider}
               onChange={(event) => setMailProvider(event.target.value as MailProvider)}
+              disabled={!hasProvider}
             >
-              <option value="sendgrid">SendGrid</option>
-              <option value="resend">Resend</option>
+              {availableProviders.map((provider) => (
+                <option key={provider} value={provider}>
+                  {providerLabels[provider] || provider}
+                </option>
+              ))}
             </Select>
+            {!hasProvider ? <p className="text-xs text-rose-600">未检测到可用发件渠道，请检查 .env 配置</p> : null}
           </div>
 
           <div className="grid gap-2">
@@ -211,7 +279,11 @@ export function DirectSendForm() {
           {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : null}
           {notice ? <p className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-700">{notice}</p> : null}
 
-          <Button type="submit" disabled={submitting || recipientCount === 0 || !subject || !hasContent} className="w-fit">
+          <Button
+            type="submit"
+            disabled={submitting || recipientCount === 0 || !subject || !hasContent || !hasProvider}
+            className="w-fit"
+          >
             {submitting ? "发送中..." : "立即发送"}
           </Button>
         </form>

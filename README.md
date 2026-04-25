@@ -1,6 +1,6 @@
 # SSPanel 邮件系统
 
-基于 Next.js + Tailwind CSS + shadcn/ui + MySQL + SendGrid/Resend，实现 SSPanel 用户筛选与邮件发送。
+基于 Next.js + Tailwind CSS + shadcn/ui + MySQL + SendGrid/Resend/SMTP，实现 SSPanel 用户筛选与邮件发送。
 
 ## 功能
 
@@ -14,8 +14,9 @@
 - 读取 SSPanel `user` 表作为收件人来源
 - 高级筛选：`reg_date`、`last_day_t`、`class`、`class_expire`、`node_group`、`is_admin`、`enable`
 - 邮件任务创建、任务列表、任务详情
-- SendGrid / Resend 异步队列发送（SQLite 持久化队列）+ 发送状态回写
-- 直接发送支持多邮箱批量发送，并可在 SendGrid 与 Resend 之间切换
+- SendGrid / Resend / SMTP 异步队列发送（SQLite 持久化队列）+ 发送状态回写
+- 直接发送支持多邮箱批量发送，并可在 SendGrid / Resend / SMTP 之间切换
+- 前端发件渠道下拉会根据 `.env` 已配置的渠道动态显示（未配置不显示）
 - 默认发送速率控制，且支持每次发送覆盖速率
 
 ## 1. 安装依赖
@@ -37,9 +38,10 @@ cp .env.example .env
 - `MYSQL_TIMEZONE`（默认 `+08:00`，用于统一 MySQL 会话时区）
 - `SENDGRID_API_KEY` `SENDGRID_FROM_EMAIL` `SENDGRID_FROM_NAME`
 - `RESEND_API_KEY` `RESEND_FROM_EMAIL` `RESEND_FROM_NAME`
+- `SMTP_HOST` `SMTP_PORT` `SMTP_SECURE` `SMTP_USER` `SMTP_PASS` `SMTP_FROM_EMAIL` `SMTP_FROM_NAME`
 - `QUEUE_SQLITE_PATH`（默认 `./data/email-queue.sqlite`）
 - `DEFAULT_SEND_RATE_PER_MINUTE`（默认 60）
-- `DEFAULT_MAIL_PROVIDER`（`sendgrid` 或 `resend`，默认 `sendgrid`）
+- `DEFAULT_MAIL_PROVIDER`（`sendgrid` / `resend` / `smtp`，默认 `sendgrid`）
 - 管理员密码二选一：
   - 推荐：`ADMIN_PASSWORD_HASH`（SHA-256）
   - 临时：`ADMIN_PASSWORD`

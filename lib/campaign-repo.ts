@@ -119,7 +119,7 @@ export function ensureCampaignSchema() {
         filter_json JSON NOT NULL,
         recipient_count INT NOT NULL DEFAULT 0,
         status ENUM('draft','sending','done','failed','partial','stopped') NOT NULL DEFAULT 'draft',
-        send_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid',
+        send_provider ENUM('sendgrid','resend','smtp') NOT NULL DEFAULT 'sendgrid',
         error_message TEXT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         started_at DATETIME NULL,
@@ -140,13 +140,13 @@ export function ensureCampaignSchema() {
       "send_provider",
       `
         ALTER TABLE marketing_campaign
-        ADD COLUMN send_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
+        ADD COLUMN send_provider ENUM('sendgrid','resend','smtp') NOT NULL DEFAULT 'sendgrid'
       `,
     );
 
     await pool.execute(`
       ALTER TABLE marketing_campaign
-      MODIFY COLUMN send_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
+      MODIFY COLUMN send_provider ENUM('sendgrid','resend','smtp') NOT NULL DEFAULT 'sendgrid'
     `);
 
     await pool.execute(`

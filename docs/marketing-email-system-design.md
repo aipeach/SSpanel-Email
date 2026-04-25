@@ -5,7 +5,7 @@
 本文档描述当前仓库中已经实现的 SSPanel 邮件系统，包括：
 - 管理员登录与会话鉴权
 - SSPanel 用户筛选与任务化发信
-- SendGrid 直接发送
+- SendGrid / Resend / SMTP 发件
 - 异步队列发送
 - 发送日志查询
 
@@ -15,12 +15,12 @@
 
 系统用于面向 SSPanel 用户进行邮件发送管理，提供两条发送路径：
 - 任务发送：先筛选收件人，创建任务，再异步队列发送。
-- 直接发送：对单个邮箱立即发送。
+- 直接发送：对一个或多个邮箱立即发送。
 
 核心要求：
 - 所有后台能力需要登录。
 - 收件人数据源来自 SSPanel 的 MySQL `user` 表。
-- 发信通道为 SendGrid。
+- 发信通道支持 SendGrid、Resend、SMTP。
 - 支持可追踪的发送记录和筛选回溯。
 
 ## 3. 技术架构
@@ -28,7 +28,7 @@
 - 框架：Next.js App Router + TypeScript
 - UI：Tailwind CSS + shadcn/ui
 - MySQL 访问：`mysql2/promise`
-- 邮件发送：`@sendgrid/mail`
+- 邮件发送：`@sendgrid/mail`、Resend API、`nodemailer`（SMTP）
 - 参数校验：`zod`
 - 会话签名：`jose`
 - 队列存储：SQLite（Node 内置 `node:sqlite`）
@@ -58,9 +58,22 @@
   - `SENDGRID_API_KEY`
   - `SENDGRID_FROM_EMAIL`
   - `SENDGRID_FROM_NAME`
+- Resend
+  - `RESEND_API_KEY`
+  - `RESEND_FROM_EMAIL`
+  - `RESEND_FROM_NAME`
+- SMTP
+  - `SMTP_HOST`
+  - `SMTP_PORT`
+  - `SMTP_SECURE`
+  - `SMTP_USER`
+  - `SMTP_PASS`
+  - `SMTP_FROM_EMAIL`
+  - `SMTP_FROM_NAME`
 - 异步队列
   - `QUEUE_SQLITE_PATH`
   - `DEFAULT_SEND_RATE_PER_MINUTE`
+  - `DEFAULT_MAIL_PROVIDER`（`sendgrid` / `resend` / `smtp`）
 
 ## 5. 鉴权与访问控制
 
@@ -84,10 +97,11 @@
 - `/campaigns`：任务列表
 - `/campaigns/new`：创建任务 / 编辑草稿任务
 - `/campaigns/[id]`：任务详情、开始发送、停止发送、删除任务
-- `/direct-send`：直接发送单封邮件
+- `/direct-send`：直接发送（支持多邮箱）
 - `/logs`：发送日志查询
+- `/connection-status`：数据库连接状态
 
-侧边栏统一入口：用户概览、任务列表、创建任务、直接发送、发送日志。
+侧边栏统一入口：用户概览、任务列表、创建任务、直接发送、发送日志、连接状态。
 
 ## 7. 数据模型
 

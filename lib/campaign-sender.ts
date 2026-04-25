@@ -7,7 +7,7 @@ import {
   resetFailedRecipientsToPending,
   startCampaignSending,
 } from "@/lib/campaign-repo";
-import { normalizeMailProvider, sendOneEmail, type MailProvider } from "@/lib/mail-provider";
+import { MailProviderConfigError, normalizeMailProvider, sendOneEmail, type MailProvider } from "@/lib/mail-provider";
 import {
   claimNextQueueJob,
   createQueueJob,
@@ -77,21 +77,37 @@ function resolveRatePerMinute(overrideRatePerMinute?: number) {
 }
 
 export function getDefaultMailProvider() {
-  return normalizeMailProvider(process.env.DEFAULT_MAIL_PROVIDER?.trim() || undefined);
+  try {
+    return normalizeMailProvider(process.env.DEFAULT_MAIL_PROVIDER?.trim() || undefined);
+  } catch (error) {
+    if (error instanceof MailProviderConfigError) {
+      throw new CampaignSendError(error.message, error.status);
+    }
+
+    throw error;
+  }
 }
 
 function resolveMailProvider(overrideMailProvider?: MailProvider) {
-  if (overrideMailProvider) {
-    return {
-      mailProvider: normalizeMailProvider(overrideMailProvider),
-      usedDefaultProvider: false,
-    };
-  }
+  try {
+    if (overrideMailProvider) {
+      return {
+        mailProvider: normalizeMailProvider(overrideMailProvider),
+        usedDefaultProvider: false,
+      };
+    }
 
-  return {
-    mailProvider: getDefaultMailProvider(),
-    usedDefaultProvider: true,
-  };
+    return {
+      mailProvider: getDefaultMailProvider(),
+      usedDefaultProvider: true,
+    };
+  } catch (error) {
+    if (error instanceof MailProviderConfigError) {
+      throw new CampaignSendError(error.message, error.status);
+    }
+
+    throw error;
+  }
 }
 
 function getErrorMessage(error: unknown) {

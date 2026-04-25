@@ -13,7 +13,7 @@ type SystemLogRow = {
   source: "campaign" | "direct";
   sourceRecordId: number;
   campaignId: number | null;
-  mailProvider: "sendgrid" | "resend" | null;
+  mailProvider: "sendgrid" | "resend" | "smtp" | null;
   toEmail: string;
   userName: string;
   subject: string;
@@ -46,6 +46,10 @@ function sourceLabel(source: SystemLogRow["source"]) {
 function providerLabel(provider: SystemLogRow["mailProvider"]) {
   if (provider === "resend") {
     return "Resend";
+  }
+
+  if (provider === "smtp") {
+    return "SMTP";
   }
 
   if (provider === "sendgrid") {

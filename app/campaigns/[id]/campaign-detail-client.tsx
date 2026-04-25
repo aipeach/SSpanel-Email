@@ -11,6 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+type MailProvider = "sendgrid" | "resend" | "smtp";
+
+type MailProvidersResponse = {
+  providers: MailProvider[];
+  defaultProvider: MailProvider | null;
+  labels: Record<MailProvider, string>;
+  error?: string;
+};
+
 type CampaignDetail = {
   id: number;
   subject: string;
@@ -19,7 +28,7 @@ type CampaignDetail = {
   filter_json: unknown;
   recipient_count: number;
   status: "draft" | "sending" | "done" | "failed" | "partial" | "stopped";
-  send_provider: "sendgrid" | "resend";
+  send_provider: MailProvider;
   error_message: string | null;
   created_at: string;
   started_at: string | null;
@@ -51,7 +60,7 @@ type SendSummary = {
   alreadyQueued: boolean;
   queuedCount: number;
   ratePerMinute: number;
-  mailProvider: "sendgrid" | "resend";
+  mailProvider: MailProvider;
   usedDefaultRate: boolean;
   usedDefaultProvider: boolean;
 };
@@ -95,9 +104,16 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
   const [stopping, setStopping] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [providerError, setProviderError] = useState("");
   const [notice, setNotice] = useState("");
   const [ratePerMinuteInput, setRatePerMinuteInput] = useState("");
-  const [mailProvider, setMailProvider] = useState<"sendgrid" | "resend">("sendgrid");
+  const [mailProvider, setMailProvider] = useState<MailProvider>("sendgrid");
+  const [availableProviders, setAvailableProviders] = useState<MailProvider[]>([]);
+  const [providerLabels, setProviderLabels] = useState<Record<MailProvider, string>>({
+    sendgrid: "SendGrid",
+    resend: "Resend",
+    smtp: "SMTP",
+  });
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
 
   const loadCampaign = useCallback(async (silent = false) => {
@@ -151,10 +167,62 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
   }, [campaign, loadCampaign]);
 
   useEffect(() => {
-    if (campaign) {
-      setMailProvider(campaign.send_provider);
+    let alive = true;
+
+    async function loadMailProviders() {
+      try {
+        const response = await fetch("/api/mail-providers", { method: "GET" });
+        const payload = (await response.json()) as MailProvidersResponse;
+
+        if (!response.ok) {
+          if (alive) {
+            setProviderError(payload.error || "加载发件渠道失败");
+          }
+          return;
+        }
+
+        if (!alive) {
+          return;
+        }
+
+        const providers = payload.providers || [];
+        setProviderLabels(payload.labels || { sendgrid: "SendGrid", resend: "Resend", smtp: "SMTP" });
+        setAvailableProviders(providers);
+
+        if (providers.length === 0) {
+          setProviderError("未检测到可用发件渠道，请先在 .env 配置 SendGrid、Resend 或 SMTP 参数");
+          return;
+        }
+
+        setProviderError("");
+      } catch {
+        if (alive) {
+          setProviderError("加载发件渠道失败，请稍后重试");
+        }
+      }
     }
-  }, [campaign]);
+
+    void loadMailProviders();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!campaign) {
+      return;
+    }
+
+    if (availableProviders.includes(campaign.send_provider)) {
+      setMailProvider(campaign.send_provider);
+      return;
+    }
+
+    if (availableProviders.length > 0) {
+      setMailProvider(availableProviders[0]);
+    }
+  }, [campaign, availableProviders]);
 
   async function onSendNow() {
     setSending(true);
@@ -174,6 +242,12 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
       }
 
       ratePerMinute = parsed;
+    }
+
+    if (!availableProviders.includes(mailProvider)) {
+      setError("当前发件渠道不可用，请检查 .env 配置");
+      setSending(false);
+      return;
     }
 
     try {
@@ -204,8 +278,8 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
         const queueAction = summary.alreadyQueued ? "已有任务在队列中，已触发继续处理" : "已加入异步队列";
         const rateLabel = summary.usedDefaultRate ? `默认速率 ${summary.ratePerMinute}` : `本次速率 ${summary.ratePerMinute}`;
         const providerLabel = summary.usedDefaultProvider
-          ? `默认渠道 ${summary.mailProvider}`
-          : `本次渠道 ${summary.mailProvider}`;
+          ? `默认渠道 ${providerLabels[summary.mailProvider] || summary.mailProvider}`
+          : `本次渠道 ${providerLabels[summary.mailProvider] || summary.mailProvider}`;
         setNotice(`${queueAction}（Job #${summary.jobId}，待处理 ${summary.queuedCount}，${rateLabel} 封/分钟，${providerLabel}）`);
       }
 
@@ -307,6 +381,7 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
     campaign.status === "stopped";
   const canStopNow = campaign.status === "sending";
   const canEditDraft = campaign.status === "draft";
+  const hasProvider = availableProviders.length > 0;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -325,7 +400,9 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
           <p className="text-sm text-slate-700">完成时间：{campaign.finished_at ? new Date(campaign.finished_at).toLocaleString() : "-"}</p>
           <p className="text-sm text-slate-700">失败信息：{campaign.error_message || "-"}</p>
           <p className="text-sm text-slate-700">发送模式：异步队列（SQLite）</p>
-          <p className="text-sm text-slate-700">当前发件渠道：{campaign.send_provider}</p>
+          <p className="text-sm text-slate-700">
+            当前发件渠道：{providerLabels[campaign.send_provider] || campaign.send_provider}
+          </p>
 
           {canSendNow ? (
             <>
@@ -346,16 +423,21 @@ export function CampaignDetailClient({ campaignId }: CampaignDetailClientProps) 
                 <Select
                   id="mailProvider"
                   value={mailProvider}
-                  onChange={(event) => setMailProvider(event.target.value as "sendgrid" | "resend")}
+                  onChange={(event) => setMailProvider(event.target.value as MailProvider)}
+                  disabled={!hasProvider}
                 >
-                  <option value="sendgrid">SendGrid</option>
-                  <option value="resend">Resend</option>
+                  {availableProviders.map((provider) => (
+                    <option key={provider} value={provider}>
+                      {providerLabels[provider] || provider}
+                    </option>
+                  ))}
                 </Select>
+                {providerError ? <p className="text-xs text-rose-600">{providerError}</p> : null}
               </div>
 
               <Button
                 type="button"
-                disabled={sending}
+                disabled={sending || !hasProvider}
                 onClick={() => {
                   void onSendNow();
                 }}

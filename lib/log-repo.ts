@@ -56,7 +56,7 @@ export function ensureDirectSendLogSchema() {
         to_email VARCHAR(255) NOT NULL,
         user_name VARCHAR(128) NOT NULL,
         subject VARCHAR(255) NOT NULL,
-        mail_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid',
+        mail_provider ENUM('sendgrid','resend','smtp') NOT NULL DEFAULT 'sendgrid',
         content_format ENUM('html','markdown') NOT NULL DEFAULT 'html',
         send_status ENUM('success','failed') NOT NULL,
         provider_message_id VARCHAR(255) NULL,
@@ -74,13 +74,13 @@ export function ensureDirectSendLogSchema() {
       "mail_provider",
       `
         ALTER TABLE direct_send_log
-        ADD COLUMN mail_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
+        ADD COLUMN mail_provider ENUM('sendgrid','resend','smtp') NOT NULL DEFAULT 'sendgrid'
       `,
     );
 
     await pool.execute(`
       ALTER TABLE direct_send_log
-      MODIFY COLUMN mail_provider ENUM('sendgrid','resend') NOT NULL DEFAULT 'sendgrid'
+      MODIFY COLUMN mail_provider ENUM('sendgrid','resend','smtp') NOT NULL DEFAULT 'sendgrid'
     `);
   })();
 

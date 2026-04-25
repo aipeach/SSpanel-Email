@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { buildEmailContent } from "@/lib/email-content";
-import { normalizeMailProvider, sendOneEmail } from "@/lib/mail-provider";
+import { MailProviderConfigError, normalizeMailProvider, sendOneEmail } from "@/lib/mail-provider";
 import { recordDirectSendLog } from "@/lib/log-repo";
 
 const payloadSchema = z.object({
@@ -13,7 +13,7 @@ const payloadSchema = z.object({
     .optional(),
   userName: z.string().trim().max(128, "用户名过长").optional(),
   subject: z.string().trim().min(1, "主题不能为空").max(255, "主题过长"),
-  mailProvider: z.enum(["sendgrid", "resend"]).optional(),
+  mailProvider: z.enum(["sendgrid", "resend", "smtp"]).optional(),
   contentFormat: z.enum(["html", "markdown"]).default("html"),
   htmlContent: z.string().optional(),
   markdownContent: z.string().optional(),
@@ -168,6 +168,10 @@ export async function POST(request: NextRequest) {
         { error: error.issues[0]?.message || "参数错误" },
         { status: 400 },
       );
+    }
+
+    if (error instanceof MailProviderConfigError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
     if (

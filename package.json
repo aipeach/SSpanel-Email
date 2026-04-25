@@ -2,7 +2,7 @@
   "name": "sspanel-email",
   "version": "1.0.0",
   "private": true,
-  "description": "SSPanel email system built with Next.js + Tailwind CSS + shadcn/ui + SendGrid/Resend",
+  "description": "SSPanel email system built with Next.js + Tailwind CSS + shadcn/ui + SendGrid/Resend/SMTP",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -20,6 +20,7 @@
     "marked": "^18.0.2",
     "mysql2": "^3.22.2",
     "next": "^16.2.4",
+    "nodemailer": "^8.0.6",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwind-merge": "^3.5.0",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
     "@types/node": "^25.6.0",
+    "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "tailwindcss": "^4.2.4",

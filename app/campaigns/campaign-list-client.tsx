@@ -11,7 +11,7 @@ type CampaignItem = {
   subject: string;
   recipient_count: number;
   status: "draft" | "sending" | "done" | "failed" | "partial" | "stopped";
-  send_provider: "sendgrid" | "resend";
+  send_provider: "sendgrid" | "resend" | "smtp";
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -34,7 +34,15 @@ function statusText(status: CampaignItem["status"]) {
 }
 
 function providerLabel(provider: CampaignItem["send_provider"]) {
-  return provider === "resend" ? "Resend" : "SendGrid";
+  if (provider === "resend") {
+    return "Resend";
+  }
+
+  if (provider === "smtp") {
+    return "SMTP";
+  }
+
+  return "SendGrid";
 }
 
 export function CampaignListClient() {
