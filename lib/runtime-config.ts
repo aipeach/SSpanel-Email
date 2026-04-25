@@ -150,83 +150,10 @@ export const CONFIG_FIELDS: ConfigField[] = [
     type: "text",
     placeholder: "SSPanel",
   },
-  {
-    key: "MYSQL_HOST",
-    label: "MySQL Host",
-    description: "数据库地址。",
-    group: "数据库",
-    type: "text",
-    placeholder: "127.0.0.1",
-  },
-  {
-    key: "MYSQL_PORT",
-    label: "MySQL Port",
-    description: "数据库端口。",
-    group: "数据库",
-    type: "number",
-    placeholder: "3306",
-  },
-  {
-    key: "MYSQL_USER",
-    label: "MySQL 用户名",
-    description: "数据库账号。",
-    group: "数据库",
-    type: "text",
-  },
-  {
-    key: "MYSQL_PASSWORD",
-    label: "MySQL 密码",
-    description: "数据库密码。",
-    group: "数据库",
-    type: "password",
-  },
-  {
-    key: "MYSQL_DATABASE",
-    label: "MySQL 数据库名",
-    description: "业务库名称。",
-    group: "数据库",
-    type: "text",
-  },
-  {
-    key: "MYSQL_TIMEZONE",
-    label: "MySQL 会话时区",
-    description: "用于 NOW()/CURRENT_TIMESTAMP，默认 +08:00。",
-    group: "数据库",
-    type: "text",
-    placeholder: "+08:00",
-  },
-  {
-    key: "QUEUE_SQLITE_PATH",
-    label: "队列 SQLite 路径",
-    description: "异步队列数据库路径，默认 ./data/email-queue.sqlite。",
-    group: "队列",
-    type: "text",
-    placeholder: "./data/email-queue.sqlite",
-  },
-  {
-    key: "SESSION_SECRET",
-    label: "会话密钥",
-    description: "至少 32 位，登录态签名使用。",
-    group: "鉴权",
-    type: "password",
-  },
-  {
-    key: "ADMIN_PASSWORD_HASH",
-    label: "管理员密码 Hash",
-    description: "SHA-256 值，优先于明文密码。",
-    group: "鉴权",
-    type: "password",
-  },
-  {
-    key: "ADMIN_PASSWORD",
-    label: "管理员明文密码",
-    description: "仅在未配置 ADMIN_PASSWORD_HASH 时使用。",
-    group: "鉴权",
-    type: "password",
-  },
 ];
 
 const EDITABLE_KEY_SET = new Set(CONFIG_FIELDS.map((item) => item.key));
+const SQLITE_FALLBACK_KEY_SET = new Set(CONFIG_FIELDS.map((item) => item.key));
 
 let configDb: DatabaseSync | null = null;
 
@@ -310,6 +237,10 @@ export function getConfigValue(key: string) {
     return envValue;
   }
 
+  if (!SQLITE_FALLBACK_KEY_SET.has(key)) {
+    return null;
+  }
+
   return getStoredConfigValue(key);
 }
 
@@ -318,6 +249,10 @@ export function getConfigSource(key: string): ConfigSource {
 
   if (envValue !== null) {
     return "env";
+  }
+
+  if (!SQLITE_FALLBACK_KEY_SET.has(key)) {
+    return "unset";
   }
 
   const stored = getStoredConfigValue(key);
@@ -370,4 +305,3 @@ export function saveEditableConfigValues(values: Record<string, string>) {
     throw error;
   }
 }
-

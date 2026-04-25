@@ -29,7 +29,7 @@ function validateValueByField(key: string, value: string) {
       throw new Error(`${field.label} 必须是数字`);
     }
 
-    if ((key === "MYSQL_PORT" || key === "SMTP_PORT") && (!Number.isInteger(numberValue) || numberValue <= 0)) {
+    if (key === "SMTP_PORT" && (!Number.isInteger(numberValue) || numberValue <= 0)) {
       throw new Error(`${field.label} 必须是大于 0 的整数`);
     }
 
@@ -47,7 +47,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     settings: listEditableConfigFields(),
-    note: "配置读取优先级：.env > SQLite（编辑配置页）",
+    note: "当前页面仅支持发件策略、SendGrid、Resend、SMTP 配置；读取优先级：.env > SQLite。",
   });
 }
 
@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       settings: listEditableConfigFields(),
-      note: "配置已保存。若同名 .env 已配置，运行时会优先使用 .env。",
+      note: "配置已保存。当前仅发件相关配置支持 SQLite 回退；若同名 .env 已配置，运行时会优先使用 .env。",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -80,4 +80,3 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
-

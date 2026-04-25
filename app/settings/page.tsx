@@ -5,10 +5,9 @@ export default function SettingsPage() {
   return (
     <AppShell
       title="编辑配置"
-      description="运行时读取优先级：.env > SQLite 配置。这里保存的是 SQLite 回退配置。"
+      description="仅支持编辑发件策略、SendGrid、Resend、SMTP。读取优先级：.env > SQLite 回退配置。"
     >
       <SettingsClient />
     </AppShell>
   );
 }
-

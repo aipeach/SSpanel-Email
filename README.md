@@ -17,7 +17,7 @@
 - SendGrid / Resend / SMTP 异步队列发送（SQLite 持久化队列）+ 发送状态回写
 - 直接发送支持多邮箱批量发送，并可在 SendGrid / Resend / SMTP 之间切换
 - 前端发件渠道下拉会根据 `.env` 已配置的渠道动态显示（未配置不显示）
-- 提供“编辑配置”页面，配置写入 SQLite，读取优先级为 `.env` > SQLite
+- 提供“编辑配置”页面（仅发件策略、SendGrid、Resend、SMTP），配置写入 SQLite，读取优先级为 `.env` > SQLite
 - 默认发送速率控制，且支持每次发送覆盖速率
 
 ## 1. 安装依赖
