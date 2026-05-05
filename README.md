@@ -12,7 +12,7 @@
 
 - 管理员登录（密码从 `.env` 读取）
 - 读取 SSPanel `user` 表作为收件人来源
-- 高级筛选：`reg_date`、`last_day_t`、`class`、`class_expire`、`node_group`、`is_admin`、`enable`
+- 高级筛选：`reg_date`、`last_day_t`、`class`、`class_expire`、`node_group`、`is_admin`、`enable`、`email`
 - 邮件任务创建、任务列表、任务详情
 - SendGrid / Resend / SMTP 异步队列发送（SQLite 持久化队列）+ 发送状态回写
 - 直接发送支持多邮箱批量发送，并可在 SendGrid / Resend / SMTP 之间切换
@@ -58,7 +58,7 @@ npm run hash:admin -- your_password
 
 ## 3. 建表（系统业务表）
 
-执行 [db/schema.sql](/Users/hbn/opt/sspanel-Email/db/schema.sql) 中的 SQL。
+执行 db/schema.sql 中的 SQL。
 
 > 应用也会在运行时自动 `CREATE TABLE IF NOT EXISTS`，手工执行主要用于提前初始化。
 
