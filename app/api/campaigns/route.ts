@@ -56,10 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (
-      error instanceof Error &&
-      (error.message === "HTML 内容不能为空" || error.message === "Markdown 内容不能为空")
-    ) {
+    if (error instanceof Error && (error.message === "HTML 内容不能为空" || error.message === "Markdown 内容不能为空")) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 

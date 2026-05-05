@@ -11,6 +11,14 @@ const optionalDateSchema = z
   .or(z.literal(""))
   .transform((value) => (value ? value : undefined));
 
+const optionalTrimmedTextSchema = z
+  .string()
+  .trim()
+  .max(255)
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => (value ? value : undefined));
+
 export const recipientFilterSchema = z
   .object({
     userIds: z.array(z.number().int().min(1)).max(1000).optional(),
@@ -27,6 +35,8 @@ export const recipientFilterSchema = z
     classExpireFrom: optionalDateSchema,
     classExpireTo: optionalDateSchema,
     nodeGroups: z.array(z.number().int().min(0)).max(100).optional(),
+    emailKeyword: optionalTrimmedTextSchema,
+    emailKeywordMatchType: z.enum(["plain", "regex"]).default("plain"),
     includeAdmin: z.boolean().default(false),
     enable: z.enum(["enabled", "disabled", "all"]).default("enabled"),
   })
@@ -73,6 +83,20 @@ export const recipientFilterSchema = z
         message: "classExpireDays 必填且需为正整数",
         path: ["classExpireDays"],
       });
+    }
+
+    if (value.emailKeywordMatchType === "regex" && value.emailKeyword) {
+      try {
+        // 预先校验正则格式，避免进入 SQL 后才报错。
+        // eslint-disable-next-line no-new
+        new RegExp(value.emailKeyword);
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "邮箱关键词正则格式不正确",
+          path: ["emailKeyword"],
+        });
+      }
     }
   });
 
@@ -159,17 +183,11 @@ export const recipientFilterInputSchema = z.object({
   classExpireFrom: z.string().optional(),
   classExpireTo: z.string().optional(),
   nodeGroupsCsv: z.string().optional(),
+  emailKeyword: z.string().optional(),
+  emailKeywordMatchType: z.enum(["plain", "regex"]).optional(),
   includeAdmin: z.boolean().optional(),
   enable: z.enum(["enabled", "disabled", "all"]).optional(),
 });
-
-const optionalTrimmedTextSchema = z
-  .string()
-  .trim()
-  .max(255)
-  .optional()
-  .or(z.literal(""))
-  .transform((value) => (value ? value : undefined));
 
 export const userOverviewTableFilterInputSchema = z.object({
   userId: z.number().int().min(1).optional(),
@@ -215,6 +233,8 @@ export function normalizeRecipientFilters(input: z.input<typeof recipientFilterI
     classExpireFrom: parsedInput.classExpireFrom,
     classExpireTo: parsedInput.classExpireTo,
     nodeGroups: splitNumericCsv(parsedInput.nodeGroupsCsv),
+    emailKeyword: parsedInput.emailKeyword,
+    emailKeywordMatchType: parsedInput.emailKeywordMatchType || "plain",
     includeAdmin: parsedInput.includeAdmin ?? false,
     enable: parsedInput.enable || "enabled",
   });
@@ -244,6 +264,10 @@ export function normalizeUserOverviewSort(input?: z.input<typeof userOverviewSor
     sortField: UserOverviewSortField;
     sortOrder: UserOverviewSortOrder;
   };
+}
+
+function escapeLikePattern(input: string) {
+  return input.replace(/[\\%_]/g, "\\$&");
 }
 
 function buildWhereClause(filters: RecipientFilters, options?: { requireValidEmail?: boolean }) {
@@ -326,6 +350,16 @@ function buildWhereClause(filters: RecipientFilters, options?: { requireValidEma
   if (filters.nodeGroups?.length) {
     clauses.push(`node_group IN (${filters.nodeGroups.map(() => "?").join(",")})`);
     params.push(...filters.nodeGroups);
+  }
+
+  if (filters.emailKeyword) {
+    if (filters.emailKeywordMatchType === "regex") {
+      clauses.push("email REGEXP ?");
+      params.push(filters.emailKeyword);
+    } else {
+      clauses.push("email LIKE ? ESCAPE '\\\\'");
+      params.push(`%${escapeLikePattern(filters.emailKeyword)}%`);
+    }
   }
 
   const whereSql = clauses.length > 0 ? clauses.join(" AND ") : "1=1";

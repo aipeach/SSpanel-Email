@@ -6,7 +6,10 @@ import {
   updateDraftCampaign,
 } from "@/lib/campaign-repo";
 import { buildEmailContent } from "@/lib/email-content";
-import { listRecipients, normalizeRecipientFilters } from "@/lib/recipient-filters";
+import {
+  listRecipients,
+  normalizeRecipientFilters,
+} from "@/lib/recipient-filters";
 
 type RouteContext = {
   params: Promise<{
@@ -109,10 +112,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    if (
-      error instanceof Error &&
-      (error.message === "HTML 内容不能为空" || error.message === "Markdown 内容不能为空")
-    ) {
+    if (error instanceof Error && (error.message === "HTML 内容不能为空" || error.message === "Markdown 内容不能为空")) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 

@@ -40,6 +40,8 @@ type StoredFilters = {
   classExpireFrom?: string;
   classExpireTo?: string;
   nodeGroups?: number[];
+  emailKeyword?: string;
+  emailKeywordMatchType?: "plain" | "regex";
   includeAdmin?: boolean;
   enable?: "enabled" | "disabled" | "all";
 };
@@ -64,6 +66,27 @@ type TrafficUnit = "B" | "MB" | "GB";
 
 type CampaignBuilderProps = {
   editCampaignId?: number;
+};
+
+type ParsedStoredFilters = {
+  userIdsCsv: string;
+  regRecentDays: string;
+  regDateFrom: string;
+  regDateTo: string;
+  lastDayTMin: string;
+  lastDayTMinUnit: TrafficUnit;
+  lastDayTMax: string;
+  lastDayTMaxUnit: TrafficUnit;
+  classesCsv: string;
+  classExpireMode: "all" | "expired" | "not_expired" | "range" | "more_than_days" | "less_than_days";
+  classExpireDays: string;
+  classExpireFrom: string;
+  classExpireTo: string;
+  nodeGroupsCsv: string;
+  emailKeyword: string;
+  emailKeywordMatchType: "plain" | "regex";
+  includeAdmin: boolean;
+  enable: "enabled" | "disabled" | "all";
 };
 
 function convertTrafficToBytes(value: string, unit: TrafficUnit) {
@@ -113,6 +136,8 @@ function buildFiltersPayload(input: {
   classExpireFrom: string;
   classExpireTo: string;
   nodeGroupsCsv: string;
+  emailKeyword: string;
+  emailKeywordMatchType: "plain" | "regex";
   includeAdmin: boolean;
   enable: string;
 }) {
@@ -129,6 +154,8 @@ function buildFiltersPayload(input: {
     classExpireFrom: input.classExpireFrom,
     classExpireTo: input.classExpireTo,
     nodeGroupsCsv: input.nodeGroupsCsv,
+    emailKeyword: input.emailKeyword,
+    emailKeywordMatchType: input.emailKeywordMatchType,
     includeAdmin: input.includeAdmin,
     enable: input.enable,
   };
@@ -146,7 +173,7 @@ function toCsv(values: unknown) {
   return normalized.join(",");
 }
 
-function parseStoredFilters(filterJson: unknown) {
+function parseStoredFilters(filterJson: unknown): ParsedStoredFilters {
   try {
     const parsed =
       typeof filterJson === "string" ? (JSON.parse(filterJson) as StoredFilters) : (filterJson as StoredFilters);
@@ -173,6 +200,8 @@ function parseStoredFilters(filterJson: unknown) {
       classExpireFrom: typeof parsed.classExpireFrom === "string" ? parsed.classExpireFrom : "",
       classExpireTo: typeof parsed.classExpireTo === "string" ? parsed.classExpireTo : "",
       nodeGroupsCsv: toCsv(parsed.nodeGroups),
+      emailKeyword: typeof parsed.emailKeyword === "string" ? parsed.emailKeyword : "",
+      emailKeywordMatchType: parsed.emailKeywordMatchType === "regex" ? "regex" : "plain",
       includeAdmin: Boolean(parsed.includeAdmin),
       enable: parsed.enable === "disabled" || parsed.enable === "all" ? parsed.enable : "enabled",
     };
@@ -192,6 +221,8 @@ function parseStoredFilters(filterJson: unknown) {
       classExpireFrom: "",
       classExpireTo: "",
       nodeGroupsCsv: "",
+      emailKeyword: "",
+      emailKeywordMatchType: "plain" as const,
       includeAdmin: false,
       enable: "enabled",
     };
@@ -230,6 +261,8 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
   const [classExpireFrom, setClassExpireFrom] = useState("");
   const [classExpireTo, setClassExpireTo] = useState("");
   const [nodeGroupsCsv, setNodeGroupsCsv] = useState("");
+  const [emailKeyword, setEmailKeyword] = useState("");
+  const [emailKeywordMatchType, setEmailKeywordMatchType] = useState<"plain" | "regex">("plain");
   const [includeAdmin, setIncludeAdmin] = useState(false);
   const [enable, setEnable] = useState("enabled");
 
@@ -298,6 +331,8 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
         setClassExpireFrom(storedFilters.classExpireFrom);
         setClassExpireTo(storedFilters.classExpireTo);
         setNodeGroupsCsv(storedFilters.nodeGroupsCsv);
+        setEmailKeyword(storedFilters.emailKeyword);
+        setEmailKeywordMatchType(storedFilters.emailKeywordMatchType);
         setIncludeAdmin(storedFilters.includeAdmin);
         setEnable(storedFilters.enable);
 
@@ -343,6 +378,8 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
       classExpireFrom,
       classExpireTo,
       nodeGroupsCsv,
+      emailKeyword,
+      emailKeywordMatchType,
       includeAdmin,
       enable,
     });
@@ -393,6 +430,8 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
       classExpireFrom,
       classExpireTo,
       nodeGroupsCsv,
+      emailKeyword,
+      emailKeywordMatchType,
       includeAdmin,
       enable,
     });
@@ -515,6 +554,28 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
                   <option value="enabled">仅启用</option>
                   <option value="disabled">仅禁用</option>
                   <option value="all">全部</option>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="emailKeyword">邮箱关键词（可选）</Label>
+                <Input
+                  id="emailKeyword"
+                  value={emailKeyword}
+                  onChange={(e) => setEmailKeyword(e.target.value)}
+                  placeholder={emailKeywordMatchType === "regex" ? "例如 ^.*@gmail\\.com$" : "例如 gmail.com"}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="emailKeywordMatchType">邮箱关键词匹配方式</Label>
+                <Select
+                  id="emailKeywordMatchType"
+                  value={emailKeywordMatchType}
+                  onChange={(e) => setEmailKeywordMatchType(e.target.value as "plain" | "regex")}
+                >
+                  <option value="plain">普通文本匹配</option>
+                  <option value="regex">正则匹配</option>
                 </Select>
               </div>
 
