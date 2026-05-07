@@ -27,6 +27,14 @@ type CampaignResponse = {
   error?: string;
 };
 
+type EmailPreviewResponse = {
+  ok?: boolean;
+  htmlContent?: string;
+  textContent?: string;
+  previewUserName?: string;
+  error?: string;
+};
+
 type StoredFilters = {
   userIds?: number[];
   regRecentDays?: number;
@@ -237,9 +245,14 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
 
   const [loadingInitial, setLoadingInitial] = useState(Boolean(isEditMode));
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [loadingEmailPreview, setLoadingEmailPreview] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
+  const [emailPreviewHtml, setEmailPreviewHtml] = useState("");
+  const [emailPreviewText, setEmailPreviewText] = useState("");
+  const [emailPreviewTab, setEmailPreviewTab] = useState<"html" | "text">("html");
+  const [emailPreviewUserName, setEmailPreviewUserName] = useState("");
 
   const [subject, setSubject] = useState("");
   const [contentFormat, setContentFormat] = useState<ContentFormat>("html");
@@ -478,6 +491,41 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
     }
   }
 
+  async function onPreviewEmail() {
+    setLoadingEmailPreview(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/email-preview", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contentFormat,
+          htmlContent: contentFormat === "html" ? htmlContent : undefined,
+          markdownContent: contentFormat === "markdown" ? markdownContent : undefined,
+          textContent,
+        }),
+      });
+
+      const payload = (await response.json()) as EmailPreviewResponse;
+
+      if (!response.ok) {
+        setError(payload.error || "邮件预览失败");
+        return;
+      }
+
+      setEmailPreviewHtml(payload.htmlContent || "");
+      setEmailPreviewText(payload.textContent || "");
+      setEmailPreviewUserName(payload.previewUserName || "");
+    } catch {
+      setError("邮件预览失败，请稍后重试");
+    } finally {
+      setLoadingEmailPreview(false);
+    }
+  }
+
   const hasMainContent = contentFormat === "html" ? htmlContent.trim().length > 0 : markdownContent.trim().length > 0;
 
   if (loadingInitial) {
@@ -538,6 +586,42 @@ export function CampaignBuilder({ editCampaignId }: CampaignBuilderProps) {
             <div className="grid gap-2">
               <Label htmlFor="textContent">纯文本内容（可选，不填则自动生成）</Label>
               <Textarea id="textContent" rows={6} value={textContent} onChange={(e) => setTextContent(e.target.value)} />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-medium text-slate-900">邮件效果预览（含页脚）</p>
+                <Button type="button" variant="secondary" disabled={loadingEmailPreview || !hasMainContent} onClick={() => void onPreviewEmail()}>
+                  {loadingEmailPreview ? "渲染中..." : "预览邮件效果"}
+                </Button>
+              </div>
+
+              {emailPreviewUserName ? (
+                <p className="mt-2 text-xs text-slate-500">变量 `{"{{user_name}}"}` 预览值：{emailPreviewUserName}</p>
+              ) : null}
+
+              <div className="mt-3 flex gap-2">
+                <Button type="button" variant={emailPreviewTab === "html" ? "default" : "secondary"} onClick={() => setEmailPreviewTab("html")}>
+                  HTML 视图
+                </Button>
+                <Button type="button" variant={emailPreviewTab === "text" ? "default" : "secondary"} onClick={() => setEmailPreviewTab("text")}>
+                  纯文本视图
+                </Button>
+              </div>
+
+              <div className="mt-3 min-h-28 rounded-lg border border-slate-200 bg-white p-4">
+                {emailPreviewTab === "html" ? (
+                  emailPreviewHtml ? (
+                    <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: emailPreviewHtml }} />
+                  ) : (
+                    <p className="text-sm text-slate-500">点击“预览邮件效果”后显示 HTML 渲染结果。</p>
+                  )
+                ) : emailPreviewText ? (
+                  <pre className="whitespace-pre-wrap break-words text-sm text-slate-700">{emailPreviewText}</pre>
+                ) : (
+                  <p className="text-sm text-slate-500">点击“预览邮件效果”后显示纯文本内容。</p>
+                )}
+              </div>
             </div>
 
             <h3 className="mt-2 text-base font-semibold text-slate-900">收件人筛选</h3>
