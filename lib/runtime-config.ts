@@ -27,6 +27,22 @@ export type ConfigFieldWithValue = ConfigField & {
 
 export const CONFIG_FIELDS: ConfigField[] = [
   {
+    key: "MAIL_FOOTER_NAME",
+    label: "邮件页脚名称",
+    description: "发件时自动追加到邮件底部，例如 GitHub。",
+    group: "邮件页脚",
+    type: "text",
+    placeholder: "GitHub",
+  },
+  {
+    key: "MAIL_FOOTER_LINK",
+    label: "邮件页脚超链接",
+    description: "发件时邮件页脚跳转链接，支持 http/https。",
+    group: "邮件页脚",
+    type: "text",
+    placeholder: "https://github.com",
+  },
+  {
     key: "DEFAULT_SEND_RATE_PER_MINUTE",
     label: "默认发送速率（封/分钟）",
     description: "任务发送留空速率时会使用该值。",

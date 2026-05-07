@@ -41,13 +41,25 @@ function validateValueByField(key: string, value: string) {
   if (field.type === "select" && field.options && !field.options.some((item) => item.value === value)) {
     throw new Error(`${field.label} 取值无效`);
   }
+
+  if (key === "MAIL_FOOTER_LINK") {
+    try {
+      const url = new URL(value);
+
+      if (url.protocol !== "http:" && url.protocol !== "https:") {
+        throw new Error("invalid_protocol");
+      }
+    } catch {
+      throw new Error(`${field.label} 必须是有效的 http/https 链接`);
+    }
+  }
 }
 
 export async function GET() {
   return NextResponse.json({
     ok: true,
     settings: listEditableConfigFields(),
-    note: "当前页面仅支持发件策略、SendGrid、Resend、SMTP 配置；读取优先级：SQLite > .env。",
+    note: "当前页面支持邮件页脚、发件策略、SendGrid、Resend、SMTP 配置；读取优先级：SQLite > .env。",
   });
 }
 
@@ -66,7 +78,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       settings: listEditableConfigFields(),
-      note: "配置已保存。当前仅发件相关配置支持 SQLite；读取优先级：SQLite > .env。",
+      note: "配置已保存。当前仅邮件页脚与发件相关配置支持 SQLite；读取优先级：SQLite > .env。",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
